@@ -45,8 +45,7 @@ class DNN:
         return self.model.predict(X)
 
 class LSTM_Sequential:
-    def __init__(self, values, lags, n_features, batch_size, LSTM_depth, verbose=False):
-        self.array = values.reshape((len(values), -1))
+    def __init__(self, lags, n_features, batch_size, LSTM_depth, verbose=False):
         self.lags = lags
         self.n_features = n_features
         self.batch_size = batch_size
@@ -59,15 +58,17 @@ class LSTM_Sequential:
         self.model.add(Dense(1))
         self.model.compile(optimizer='adam', loss='mse')
         
-    def fit(self, epochs, steps_per_epoch, save_path, skip_if_exist=False):
+    def fit(self, values, epochs, steps_per_epoch, save_path, skip_if_exist=False):
         self.save_path = save_path
         if os.path.exists(save_path) and skip_if_exist:
             return
-        g = TimeseriesGenerator(self.array, self.array, length=self.lags, batch_size=self.batch_size)
+        g = TimeseriesGenerator(values, values, length=self.lags, batch_size=self.batch_size)
         checkpoint_callback = ModelCheckpoint(save_path)
         self.model.fit(g, epochs=epochs, steps_per_epoch=steps_per_epoch, verbose=self.verbose, callbacks=[checkpoint_callback])
     
-    def predict(self, values):
+    def predict(self, values, batch_size=None):
+        if batch_size == None:
+            batch_size = self.batch_size
         values = values.reshape((len(values), -1))
-        g = TimeseriesGenerator(values, values, length=self.lags, batch_size=self.batch_size)
+        g = TimeseriesGenerator(values, values, length=self.lags, batch_size=batch_size)
         return load(self.save_path).predict(g)

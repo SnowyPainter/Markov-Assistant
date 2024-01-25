@@ -3,12 +3,14 @@ import numpy as np
 import yfinance as yf
 import pandas_datareader as web
 import pytz
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 def days_to_years(years):
     return 365.25 * years
 def days_to_months(months):
     return 30.44 * months
+def is_market_open():
+    return time(9, 30) < datetime.now(pytz.timezone('US/Eastern')).time() < time(16, 0)
 def today():
     return datetime.now(pytz.timezone('US/Eastern'))
 def today_before(day):
@@ -34,7 +36,7 @@ def get_symbol_historical(symbol, start, end, period,interval):
 
 def get_realtime_price(ticker):
     t = yf.Ticker(ticker)
-    return t.info["currentPrice"]
+    return t.info.get('currentPrice')
 
 def merge_dfs(dfs, on):
     merged = dfs[0]
@@ -88,3 +90,11 @@ def create_dataset(symbols, start, end, interval):
     for symbol in symbols:
         dfs.append(get_symbol_historical(symbol, start=start, end=end, period="max", interval=interval))
     return merge_dfs(dfs, on=dfs[0].index.name)
+
+def create_realtime_dataset(tickers):
+    df = pd.DataFrame()
+    for ticker in tickers:
+        df[ticker+'_Price'] = [get_realtime_price(ticker)]
+    df['Datetime'] = [pd.to_datetime(today(), format="%Y-%m-%d %H:%M:%S%z")]
+    df.set_index('Datetime', inplace=True)
+    return df
