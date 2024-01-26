@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import data
 from tensorflow.keras.models import load_model
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
@@ -13,6 +14,27 @@ from keras.layers import Dropout
 def load(path):
     return load_model(path)
 
+def dnn_prepare_dataset(df, lags, target_feature, split_ratio=0.8):
+    df, cols = data.add_lags(df, lags)
+    df['target'] = 0.8 * df[target_feature]
+    df.dropna(inplace=True)
+    train_size = int(len(df) * split_ratio)
+    train = df.iloc[0:train_size]
+    test = df.iloc[train_size:]
+    m, std = train.mean(), train.std()
+    train_ = (train - m) / std
+    test_ = (test - m) / std
+    return  train_[cols], test_[cols], train_['target'], test_['target']
+
+def dnn_prepare_for_prediction_dataset(df, lags):
+    df, lag_cols = data.add_lags(df, lags)
+    return df[lag_cols]
+
+def lstm_prepare_dataset(df):
+    df, r_cols = data.add_rate_of_return(df)
+    df = data.normalize_zscore(df)
+    return df[r_cols]
+    
 class DNN:
     def __init__(self, X_train, X_test, y_train, y_test, verbose=False):
         self.X_train = X_train
@@ -42,7 +64,7 @@ class DNN:
         return mean_squared_error(self.y_test, y_pred)
 
     def predict(self, X):
-        return self.model.predict(X)
+        return load(self.save_path).predict(X)
 
 class LSTM_Sequential:
     def __init__(self, lags, n_features, batch_size, LSTM_depth, verbose=False):
