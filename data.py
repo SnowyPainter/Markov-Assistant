@@ -98,3 +98,41 @@ def create_realtime_dataset(tickers):
     df['Datetime'] = [pd.to_datetime(today(), format="%Y-%m-%d %H:%M:%S%z")]
     df.set_index('Datetime', inplace=True)
     return df
+
+def dnn_prepare_dataset(df, lags, target_feature, split_ratio=0.8):
+    df, cols = add_lags(df, lags)
+    df['target'] = 0.8 * df[target_feature]
+    df.dropna(inplace=True)
+    train_size = int(len(df) * split_ratio)
+    train = df.iloc[0:train_size]
+    test = df.iloc[train_size:]
+    m, std = train.mean(), train.std()
+    train_ = (train - m) / std
+    test_ = (test - m) / std
+    return  train_[cols], test_[cols], train_['target'], test_['target']
+
+def dnn_prepare_for_prediction_dataset(df, lags):
+    df, lag_cols = add_lags(df, lags)
+    return df[lag_cols]
+
+def lstm_prepare_dataset(df):
+    df, r_cols = add_rate_of_return(df)
+    df = normalize_zscore(df)
+    return df[r_cols]
+
+def prepare_RSMV_data(df, start, end, symbol, window):
+    data = pd.DataFrame(df[symbol])
+    data = data.iloc[start:]
+    data['r'] = np.log(data / data.shift(1))
+    data.dropna(inplace=True)
+    data['s'] = data[symbol].rolling(window).mean()
+    data['m'] = data['r'].rolling(window).mean()
+    data['v'] = data['r'].rolling(window).std()
+    data.dropna(inplace=True)
+    data_ = (data - data.mean()) / data.std()
+    data['d'] = np.where(data['r'] > 0, 1, 0)
+    data['d'] = data['d'].astype(int)
+    if end is not None:
+        data = data.iloc[:end - start]
+        data_ = data_.iloc[:end - start]
+    return data, data_
