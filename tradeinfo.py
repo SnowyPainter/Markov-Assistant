@@ -5,27 +5,41 @@ class InfoType(Enum):
     TRAILSTOPLOSS = 2
     TAKEPROFIT = 3
     CLOSINGOUT = 4
-    NETWEALTH = 5
+    NONE = 5
+class TradeType(Enum):
+    BUY = 1
+    SELL = 2
 class TradePosition(Enum):
     LONG = 1
     SHORT = 2
+    NONE = 3
 
 class TradeInfo:
-    def __init__(self):
+    def __init__(self, date):
+        self.date = date
         self.units = -1
         self.balance = -1
+        self.info_type = InfoType.NONE
+        self.trade_position = TradePosition.NONE
+        self.takeprofit = -1
+        self.stoploss = -1
+        self.price = -1
+        self.performance = -1
+        
     def set_stoploss(self, p, pos):
-        self.trade_type = InfoType.STOPLOSS
+        self.info_type = InfoType.STOPLOSS
         self.trade_position = pos
         self.stoploss = p
     def set_trailing_stoploss(self, p, pos):
-        self.trade_type = InfoType.TRAILSTOPLOSS
+        self.info_type = InfoType.TRAILSTOPLOSS
         self.trade_position = pos
         self.stoploss = p
     def set_takeprofit(self, p, pos):
-        self.trade_type = InfoType.TAKEPROFIT
+        self.info_type = InfoType.TAKEPROFIT
         self.trade_position = pos
         self.takeprofit = p
+    def set_trade_type(self, trade_type):
+        self.trade_type = trade_type
     def set_price(self, price):
         self.price = price
     def set_units(self, units):
@@ -34,7 +48,7 @@ class TradeInfo:
         self.balance = balance
     def set_performance(self, perf):
         self.performance = perf
-    def set_trade_type(self, trade_type):
-        self.trade_type = trade_type
+    def set_info_type(self, info_type):
+        self.info_type = info_type
     def set_trade_position(self, trade_position):
         self.trade_position = trade_position

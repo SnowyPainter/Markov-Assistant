@@ -1,5 +1,6 @@
 import numpy as np
 import tradeinfo
+import datetime
 
 class RiskManager():
     def _reshape(self, state):
@@ -27,21 +28,12 @@ class RiskManager():
         price = self.env.data[self.env.symbol].iloc[bar]
         return date, price
 
-    def print_balance(self, bar):
-        date, price = self.get_date_price(bar)
-        return f'{date} | current balance = {self.current_balance:.2f}'
-
     def calculate_net_wealth(self, price):
         return self.current_balance + self.units * price
 
-    def get_net_wealth(self, bar):
-        date, price = self.get_date_price(bar)
-        net_wealth = self.calculate_net_wealth(price)
-        return net_wealth
-
     def place_buy_order(self, bar, amount=None, units=None, gprice=None):
-        info = tradeinfo.TradeInfo()
         date, price = self.get_date_price(bar)
+        info = tradeinfo.TradeInfo(date)
         if gprice is not None:
             price = gprice
         if units is None:
@@ -51,12 +43,13 @@ class RiskManager():
         self.trades += 1
         self.set_prices(price)
         info.set_units(units)
+        info.set_trade_type(tradeinfo.TradeType.BUY)
         info.set_price(price)
         return info
 
     def place_sell_order(self, bar, amount=None, units=None, gprice=None):
-        info = tradeinfo.TradeInfo()
         date, price = self.get_date_price(bar)
+        info = tradeinfo.TradeInfo(date)
         if gprice is not None:
             price = gprice
         if units is None:
@@ -66,6 +59,7 @@ class RiskManager():
         self.trades += 1
         self.set_prices(price)
         info.set_units(units)
+        info.set_trade_type(tradeinfo.TradeType.SELL)
         info.set_price(price)
         return info
 
@@ -76,8 +70,8 @@ class RiskManager():
         else:
             infos.append(self.place_sell_order(bar, units=self.units))
         perf = (self.current_balance / self.initial_amount - 1) * 100
-        info = tradeinfo.TradeInfo()
-        info.set_trade_type(tradeinfo.InfoType.CLOSINGOUT)
+        info = tradeinfo.TradeInfo(datetime.datetime.now())
+        info.set_info_type(tradeinfo.InfoType.CLOSINGOUT)
         info.set_balance(self.current_balance)
         info.set_performance(perf)
         infos.append(info)
@@ -98,7 +92,7 @@ class RiskManager():
         bar = self.env.lags
         while bar < len(self.env.data) or self.waiting:
             if bar == len(self.env.data):
-                yield ["waiting"]
+                yield "waiting"
             elif bar < len(self.env.data):
                 infos = []
                 self.wait = max(0, self.wait - 1)
@@ -107,27 +101,23 @@ class RiskManager():
                 if sl is not None and self.position != 0:
                     rc = (price - self.entry_price) / self.entry_price
                     if self.position == 1 and rc < -self.sl:
-                        slinfo = tradeinfo.TradeInfo()
+                        tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
                         if guarantee:
                             price = self.entry_price * (1 - self.sl)
-                            slinfo.set_stoploss(-self.sl, tradeinfo.TradePosition.LONG)
+                            tpinfo.set_stoploss(-self.sl, tradeinfo.TradePosition.LONG)
                         else:
-                            slinfo.set_stoploss(rc, tradeinfo.TradePosition.LONG)
-                        
-                        infos.append(slinfo)
-                        infos.append(self.place_sell_order(bar, units=self.units, gprice=price))
+                            tpinfo.set_stoploss(rc, tradeinfo.TradePosition.LONG)
+                        infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
                     elif self.position == -1 and rc > self.sl:
-                        slinfo = tradeinfo.TradeInfo()
+                        tpinfo = self.place_buy_order(bar, units=-self.units, gprice=price)
                         if guarantee:
                             price = self.entry_price * (1 + self.sl)
-                            slinfo.set_stoploss(-self.sl, tradeinfo.TradePosition.SHORT)
+                            tpinfo.set_stoploss(-self.sl, tradeinfo.TradePosition.SHORT)
                         else:
-                            slinfo.set_stoploss(rc, tradeinfo.TradePosition.SHORT)
-                        
-                        infos.append(slinfo)
-                        infos.append(self.place_buy_order(bar, units=-self.units, gprice=price))
+                            tpinfo.set_stoploss(rc, tradeinfo.TradePosition.SHORT)
+                        infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
 
@@ -138,17 +128,15 @@ class RiskManager():
                     rc_1 = (price - self.max_price) / self.entry_price
                     rc_2 = (self.min_price - price) / self.entry_price
                     if self.position == 1 and rc_1 < -self.tsl:
-                        slinfo = tradeinfo.TradeInfo()
-                        slinfo.set_trailing_stoploss(rc_1, tradeinfo.TradePosition.LONG)
-                        infos.append(slinfo)
-                        infos.append(self.place_sell_order(bar, units=self.units))
+                        tpinfo = self.place_sell_order(bar, units=self.units)
+                        tpinfo.set_trailing_stoploss(rc_1, tradeinfo.TradePosition.LONG)
+                        infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
                     elif self.position == -1 and rc_2 < -self.tsl:
-                        slinfo = tradeinfo.TradeInfo()
-                        slinfo.set_trailing_stoploss(rc_2, tradeinfo.TradePosition.SHORT)
-                        infos.append(slinfo)
-                        infos.append(self.place_buy_order(bar, units=-self.units))
+                        tpinfo = self.place_buy_order(bar, units=-self.units)
+                        tpinfo.set_trailing_stoploss(rc_2, tradeinfo.TradePosition.SHORT)
+                        infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
 
@@ -156,25 +144,23 @@ class RiskManager():
                 if tp is not None and self.position != 0:
                     rc = (price - self.entry_price) / self.entry_price
                     if self.position == 1 and rc > self.tp:
-                        info = tradeinfo.TradeInfo()
+                        tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
                         if guarantee:
                             price = self.entry_price * (1 + self.tp)
-                            info.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
-                            infos.append(info)
+                            tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
                         else:
-                            info.set_takeprofit(rc, tradeinfo.TradePosition.LONG)
-                            infos.append(info)
-                        infos.append(self.place_sell_order(bar, units=self.units, gprice=price))
+                            tpinfo.set_takeprofit(rc, tradeinfo.TradePosition.LONG)
+                        infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
                     elif self.position == -1 and rc < -self.tp:
-                        info = tradeinfo.TradeInfo()
+                        tpinfo = self.place_buy_order(bar, units=-self.units, gprice=price)
                         if guarantee:
                             price = self.entry_price * (1 - self.tp)
-                            infos.append(info.set_takeprofit(self.tp, tradeinfo.TradePosition.SHORT))
+                            tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.SHORT)
                         else:
-                            infos.append(info.set_takeprofit(-rc, tradeinfo.TradePosition.SHORT))
-                        infos.append(self.place_buy_order(bar, units=-self.units, gprice=price))
+                            tpinfo.set_takeprofit(-rc, tradeinfo.TradePosition.SHORT)
+                        infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
 
@@ -183,21 +169,21 @@ class RiskManager():
                 position = 1 if action == 1 else -1
                 if self.position in [0, -1] and position == 1 and self.wait == 0:
                     if self.position == -1:
-                        info = self.place_buy_order(bar - 1, units=-self.units)
-                        info.set_trade_position(tradeinfo.TradePosition.LONG)
-                        infos.append(info)
-                    info = self.place_buy_order(bar - 1, amount=self.current_balance)
-                    info.set_trade_position(tradeinfo.TradePosition.LONG)
-                    infos.append(info)
+                        tpinfo = self.place_buy_order(bar - 1, units=-self.units)
+                        tpinfo.set_trade_position(tradeinfo.TradePosition.LONG)
+                        infos.append(tpinfo)
+                    tpinfo = self.place_buy_order(bar - 1, amount=self.current_balance)
+                    tpinfo.set_trade_position(tradeinfo.TradePosition.LONG)
+                    infos.append(tpinfo)
                     self.position = 1
                 elif self.position in [0, 1] and position == -1 and self.wait == 0:
                     if self.position == 1:
-                        info = self.place_sell_order(bar - 1, units=self.units)
-                        info.set_trade_position(tradeinfo.TradePosition.SHORT)
-                        infos.append(info)
-                    info = self.place_sell_order(bar - 1, amount=self.current_balance)
-                    info.set_trade_position(tradeinfo.TradePosition.SHORT)
-                    infos.append(info)
+                        tpinfo = self.place_sell_order(bar - 1, units=self.units)
+                        tpinfo.set_trade_position(tradeinfo.TradePosition.SHORT)
+                        infos.append(tpinfo)
+                    tpinfo = self.place_sell_order(bar - 1, amount=self.current_balance)
+                    tpinfo.set_trade_position(tradeinfo.TradePosition.SHORT)
+                    infos.append(tpinfo)
                     self.position = -1
                     
                 self.net_wealths.append([date, self.calculate_net_wealth(price)])
