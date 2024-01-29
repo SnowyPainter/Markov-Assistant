@@ -21,7 +21,16 @@ from keras.layers import Dropout
 
 def load(path):
     return load_model(path)
-    
+
+class TrainResult:
+    def __init__(self, history, predictions):
+        self.history = history
+        self.predictions = predictions
+    def get(self, key):
+        if key in self.history:
+            return self.history[key]
+        return None
+
 class DNN:
     def __init__(self, X_train, X_test, y_train, y_test, verbose=False):
         self.X_train = X_train
@@ -44,7 +53,7 @@ class DNN:
         if os.path.exists(save_path) and skip_if_exist:
             return
         checkpoint_callback = ModelCheckpoint(save_path, save_best_only=True)
-        self.model.fit(self.X_train, self.y_train, epochs=epochs, validation_data=(self.X_test, self.y_test), verbose=self.verbose, callbacks=checkpoint_callback)
+        return self.model.fit(self.X_train, self.y_train, epochs=epochs, validation_data=(self.X_test, self.y_test), verbose=self.verbose, callbacks=checkpoint_callback)
 
     def MSE(self):
         y_pred = self.model.predict(self.X_test)
@@ -73,7 +82,7 @@ class LSTM_Sequential:
             return
         g = TimeseriesGenerator(values, values, length=self.lags, batch_size=self.batch_size)
         checkpoint_callback = ModelCheckpoint(save_path)
-        self.model.fit(g, epochs=epochs, steps_per_epoch=steps_per_epoch, verbose=self.verbose, callbacks=[checkpoint_callback])
+        return self.model.fit(g, epochs=epochs, steps_per_epoch=steps_per_epoch, verbose=self.verbose, callbacks=[checkpoint_callback])
     
     def predict(self, values, batch_size=None):
         if batch_size == None:
@@ -97,7 +106,6 @@ class action_space:
         return random.randint(0, self.n - 1)
     
 class FinanceEnv:
-
     def __init__(self, raw, symbol, features, window, lags, data_preparing_func, leverage=1, min_performance=0.85, min_accuracy=0.5, start=0, end=None):
         self.symbol = symbol
         self.features = features

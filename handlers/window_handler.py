@@ -1,4 +1,4 @@
-import sys, datetime
+import sys, datetime, os
 import tradeinfo
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -51,3 +51,11 @@ class Handler:
             self.show_error(f"Dataset made from your symbols is empty. Check your symbols")
             return -1
         return 0
+    def handle_backtest_init_error(self, model_path, df):
+        if model_path == None or not os.path.isfile(model_path):
+            self.show_error(f"Model path {model_path} is not available.")
+            return -1
+        if self.handle_flaw_dataset(df) == -1:
+            return -1
+        return 0
+            
