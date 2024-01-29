@@ -7,10 +7,11 @@ from PyQt5.QtCore import *
 
 class BacktestThread(QThread):
     signal = pyqtSignal(tradeinfo.TradeInfo)
-    def __init__(self, symbol, features, df, wait_seconds):
+    def __init__(self, trade_symbol, features, df, stock_symbols,wait_seconds):
         super(QThread, self).__init__()
         self.wait_seconds = wait_seconds
-        self.env =  models.FinanceEnv(df, symbol, features=features,
+        self.stock_symbols = stock_symbols
+        self.env =  models.FinanceEnv(df, trade_symbol, features=features,
                                 window=10,
                                 lags=3, data_preparing_func=data.prepare_RSMV_data,
                                 leverage=1,
@@ -29,9 +30,10 @@ class BacktestThread(QThread):
     
     def run(self):
         for infos in self.bt.backtest_strategy(sl=self.sl, tsl=self.tsl, tp=self.tp, wait=5, guarantee=self.guarantee):
-            if infos == "waiting" and self.bt.waiting:
-                print("STOP BUTTON PLEASE")
-                self.msleep(self.wait_seconds*1000)
+            if len(infos) == 1 and infos[0].info_type == tradeinfo.InfoType.WAITFORNEWDATA and self.bt.waiting:
+                print("Waiting For new price")
+                self.bt.env.append_raw(data.create_realtime_dataset(self.stock_symbols))
+                self.msleep(int(self.wait_seconds*1000))
                 continue
             else:
                 for info in infos:

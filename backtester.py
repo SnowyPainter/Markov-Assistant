@@ -88,11 +88,13 @@ class RiskManager():
         self.wait = 0
         self.current_balance = self.initial_amount
         self.net_wealths = list()
-
+        
         bar = self.env.lags
         while bar < len(self.env.data) or self.waiting:
             if bar == len(self.env.data):
-                yield "waiting"
+                info = tradeinfo.TradeInfo(datetime.datetime.now())
+                info.set_info_type(tradeinfo.InfoType.WAITFORNEWDATA)
+                yield [info]
             elif bar < len(self.env.data):
                 infos = []
                 self.wait = max(0, self.wait - 1)

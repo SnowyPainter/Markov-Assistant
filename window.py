@@ -74,10 +74,10 @@ class MyApp(QMainWindow):
                 p = info.stoploss
             elif infotype == tradeinfo.InfoType.TRAILSTOPLOSS:
                 p = info.stoploss
+            position = "LONG" if position == tradeinfo.TradePosition.LONG else "SHORT"
             self.status_label.setText(f"{position} : {ttype} {units} for {price}, {p}")
             date = datetime.datetime.strptime(date, '%Y-%m-%d')
             self.backtest_plot.update_plot(date, net_wealth)
-            self.trade_n += 1
         elif(infotype == tradeinfo.InfoType.CLOSINGOUT):
             self.previous_net_wealth = net_wealth
             QMessageBox.information(self, 'CLOSED OUT', f'performance : {info.performance}, net : {net_wealth}')
@@ -87,20 +87,13 @@ class MyApp(QMainWindow):
         print("***WAIT FALSE TRADE****")
         
     def run_btn_clicked(self):
-        
         symbol = 'nvda_Price'
         symbols = ["nvda", "amd", "intc"]
         features = [symbol, 'r', 's', 'm', 'v']
-        df = None
         amount = 10000
-        if self.trade_n > 0:
-            df = data.create_realtime_dataset(symbols)
-            amount = self.previous_net_wealth
-        else:
-            self.trade_n = 0
-            df = data.create_dataset(symbols, start=data.today_before(20), end=data.today(), interval='5m')
+        df = data.create_dataset(symbols, start=data.today_before(10), end=data.today(), interval='5m')
         model = models.load('./models/agent.keras')
-        self.btt = QTBacktest.BacktestThread(symbol, features, df, 1)
+        self.btt = QTBacktest.BacktestThread(symbol, features, df, symbols, 0.1)
         self.btt.signal.connect(self.handle_backtest_result)
         self.btt.set_backtest_strategy(model, amount)
         self.btt.start()

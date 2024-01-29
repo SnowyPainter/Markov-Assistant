@@ -6,6 +6,7 @@ class InfoType(Enum):
     TAKEPROFIT = 3
     CLOSINGOUT = 4
     NONE = 5
+    WAITFORNEWDATA = 6
 class TradeType(Enum):
     BUY = 1
     SELL = 2

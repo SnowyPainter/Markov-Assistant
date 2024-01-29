@@ -116,7 +116,7 @@ class FinanceEnv:
         self.data, self.data_ = self.prepare_data(self.raw, self.start, self.end, self.symbol, self.window)
 
     def append_raw(self, data):
-        self.raw = self.raw.append(data)
+        self.raw = pd.concat([self.raw, data])
         self.data, self.data_ = self.prepare_data(self.raw, self.start, self.end, self.symbol, self.window)
 
     def _get_state(self):
