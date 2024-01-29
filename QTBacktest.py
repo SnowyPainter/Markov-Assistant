@@ -31,7 +31,6 @@ class BacktestThread(QThread):
     def run(self):
         for infos in self.bt.backtest_strategy(sl=self.sl, tsl=self.tsl, tp=self.tp, wait=5, guarantee=self.guarantee):
             if len(infos) == 1 and infos[0].info_type == tradeinfo.InfoType.WAITFORNEWDATA and self.bt.waiting:
-                print("Waiting For new price")
                 self.bt.env.append_raw(data.create_realtime_dataset(self.stock_symbols))
                 self.msleep(int(self.wait_seconds*1000))
                 continue
