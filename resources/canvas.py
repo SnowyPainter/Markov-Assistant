@@ -15,7 +15,6 @@ class RealTimePlot(QWidget):
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
         self.canvas = PlotCanvas(self, width=5, height=4)
-        self.canvas.set_major_formatter('%H:%M:%S')
         self.main_layout.addWidget(self.canvas)
         self.setLayout(self.main_layout)
 
@@ -24,7 +23,6 @@ class RealTimePlot(QWidget):
         
     def clear(self):
         self.canvas.clear()
-        self.canvas.set_major_formatter('%H:%M:%S')
         
 class StaticPlot(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -68,7 +66,10 @@ class PlotCanvas(FigureCanvas):
         
     def set_major_formatter(self, dateformat):
         self.axes.xaxis.set_major_formatter(mdates.DateFormatter(dateformat))
-        
+    
+    def set_title(self, title):
+        self.axes.set_title(title)
+    
     def add_data(self, x, y):
         self.x_data.append(x)
         self.y_data.append(y)

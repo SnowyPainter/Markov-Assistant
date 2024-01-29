@@ -104,6 +104,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.dnn_lags_input.setValidator(val_int)
         self.lstm_lags_input.setValidator(val_int)
         
+        self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
         self.backtest_option_symbol_input.setPlaceholderText("Target symbol for Backtesting")
         self.backtest_option_symbol_input.setText("nvda")
         self.backtest_option_amount_input.setValidator(val_int)
@@ -249,7 +250,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         
     def backtest_stop_btn_clicked(self):
         self.btt.stop_trade()
-        print("*** stop trade ***")
+        QMessageBox.information(self, "Stop Trade", "Stopped Trading with realtime data.")
     
     def backtest_run_btn_clicked(self):
         symbol = self.backtest_option_symbol_input.text().strip()
@@ -261,6 +262,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         if self.handle_backtest_init_error(self.backtest_model_path, df) == -1:
             return
         self.backtest_plot.clear()
+        self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
         self.backtest_trade_status_label.setText("TRADE STATUS")
         
         model = models.load(self.backtest_model_path)

@@ -31,6 +31,14 @@ class TrainResult:
             return self.history[key]
         return None
 
+class EpisodeData:
+    def __init__(self, episode=0, treward=0, max_treward=0, performance=0, epsilon=0):
+        self.episode = episode
+        self.treward = treward
+        self.max_treward = max_treward
+        self.performance = performance
+        self.epsilon = epsilon
+
 class DNN:
     def __init__(self, X_train, X_test, y_train, y_test, verbose=False):
         self.X_train = X_train
@@ -250,13 +258,10 @@ class TradingBot:
                     self.aperformances.append(
                         sum(self.performances[-25:]) / 25)
                     self.max_treward = max(self.max_treward, treward)
-                    templ = 'episode: {:2d}/{} | treward: {:4d} | '
-                    templ += 'perf: {:5.3f} | av: {:5.1f} | max: {:4d}'
-                    print(templ.format(e, episodes, treward, perf,
-                                       av, self.max_treward), end='\r')
+                    yield EpisodeData(e, treward, self.max_treward, perf)
                     break
             if self.val:
-                self.validate(e, episodes)
+                yield self.validate(e, episodes)
             if len(self.memory) > self.batch_size:
                 self.replay()
         print()
@@ -274,10 +279,4 @@ class TradingBot:
                 treward = _ + 1
                 perf = self.valid_env.performance
                 self.vperformances.append(perf)
-                templ = 71 * '='
-                templ += '\nepisode: {:2d}/{} | VALIDATION | '
-                templ += 'treward: {:4d} | perf: {:5.3f} | eps: {:.2f}\n'
-                templ += 71 * '='
-                print(templ.format(e, episodes, treward,
-                                       perf, self.epsilon))
-                break
+                return EpisodeData(episode=e, epsilon=self.epsilon)
