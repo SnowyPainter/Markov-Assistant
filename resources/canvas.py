@@ -49,7 +49,6 @@ class StaticPlot(FigureCanvas):
     def clear_plot(self):
         self.ax.clear()
         self.plot_static_data([], [])
-        self.draw()
         
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -70,11 +69,18 @@ class PlotCanvas(FigureCanvas):
     def set_major_formatter(self, dateformat):
         self.axes.xaxis.set_major_formatter(mdates.DateFormatter(dateformat))
         
-    def plot_data(self, title, xlabel, ylabel, x, y):
-        self.axes.plot(x, y)
-        self.axes.set_title(title)
-        self.axes.set_xlabel(xlabel)
-        self.axes.set_ylabel(ylabel)
+    def add_data(self, x, y):
+        #x = mdates.date2num(datetime.datetime.strptime(str(x), '%Y-%m-%d %H:%M:%S'))
+        self.x_data.append(x)
+        self.y_data.append(y)
+        if len(self.x_data) > 10:
+            self.x_data = self.x_data[-10:]
+            self.y_data = self.y_data[-10:]
+        self.line.set_xdata(self.x_data)
+        self.line.set_ydata(self.y_data)
+        self.axes.relim()
+        self.axes.autoscale_view()
+
         self.draw()
 
     def clear(self):
