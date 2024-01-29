@@ -20,8 +20,10 @@ class RealTimePlot(QWidget):
 
     def update_plot(self, x, y):
         self.canvas.add_data(x, y)
+        
+    def clear(self):
+        self.canvas.clear()
 
-    
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
@@ -37,7 +39,7 @@ class PlotCanvas(FigureCanvas):
         self.y_data = []
 
         self.line, = self.axes.plot(self.x_data, self.y_data, marker='o')
-        self.axes.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        self.axes.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
         
     def add_data(self, x, y):
         x = mdates.date2num(datetime.datetime.strptime(str(x), '%Y-%m-%d %H:%M:%S'))
@@ -53,7 +55,11 @@ class PlotCanvas(FigureCanvas):
         self.axes.autoscale_view()
 
         self.draw()
-        
-    def clear_data(self):
-        self.fig.clear()
-        self.axes = self.fig.add_subplot(111)
+
+    def clear(self):
+        self.axes.clear()
+        self.x_data = []
+        self.y_data = []
+        self.line, = self.axes.plot(self.x_data, self.y_data, marker='o')  # 새로운 플롯을 그림
+        self.axes.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+        self.draw()
