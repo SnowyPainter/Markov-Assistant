@@ -70,7 +70,6 @@ class PlotCanvas(FigureCanvas):
         self.axes.xaxis.set_major_formatter(mdates.DateFormatter(dateformat))
         
     def add_data(self, x, y):
-        #x = mdates.date2num(datetime.datetime.strptime(str(x), '%Y-%m-%d %H:%M:%S'))
         self.x_data.append(x)
         self.y_data.append(y)
         if len(self.x_data) > 10:
