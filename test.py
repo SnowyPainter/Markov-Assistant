@@ -1,6 +1,6 @@
 import data
 import models
-import backtester
+import riskmanager
 import time
 import threading
 import matplotlib.pyplot as plt

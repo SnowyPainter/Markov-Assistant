@@ -24,7 +24,7 @@ class Handler:
             elif infotype == tradeinfo.InfoType.TRAILSTOPLOSS:
                 p = info.stoploss
             position = "LONG" if position == tradeinfo.TradePosition.LONG else "SHORT"
-            self.trade_status_label.setText(f"{position} : {ttype} {units} for {price}, {p}")
+            self.backtest_trade_status_label.setText(f"{position} : {ttype} {units} for {price}, {p}")
             date = datetime.datetime.strptime(date, '%Y-%m-%d')
             self.backtest_plot.update_plot(date, net_wealth)
         elif(infotype == tradeinfo.InfoType.CLOSINGOUT):

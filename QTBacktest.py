@@ -1,6 +1,6 @@
 import data
 import models
-import backtester
+import riskmanager
 import tradeinfo
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -22,7 +22,7 @@ class BacktestThread(QThread):
         self.bt.waiting = False
         
     def set_backtest_strategy(self, model, amount, fee=0.0025, sl=0.015, tsl=None, tp=0.045, guarantee=True):
-        self.bt = backtester.RiskManager(self.env, model, amount, fee, 0, waiting=True)
+        self.bt = riskmanager.RiskManager(self.env, model, amount, fee, 0, waiting=True)
         self.sl = sl
         self.tsl = tsl
         self.tp = tp
