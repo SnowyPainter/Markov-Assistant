@@ -289,8 +289,7 @@ class MyApp(QMainWindow, window_handler.Handler):
     
     def backtest_new_model_btn_clicked(self):
         sub = TrainRLModelWindow()
-        self.windows.append(sub)
-        sub.show()
+        sub.exec_()
         
     def backtest_open_model_btn_clicked(self):
         fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './')[0]

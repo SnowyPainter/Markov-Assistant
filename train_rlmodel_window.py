@@ -3,9 +3,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import models, resources.canvas as canvas, data, QTLearn
 
-class TrainRLModelWindow(QWidget):
+class TrainRLModelWindow(QDialog):
     def __init__(self):
-        super().__init__()
+        super(TrainRLModelWindow, self).__init__(None)
         self.resize(1024, 600)
         self.center()
         self.setWindowTitle("Training New RL Model for Backtesting")
