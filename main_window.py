@@ -13,6 +13,10 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.windows = []
         self.initUI()
         
+        self.dnn_train_result = None
+        self.lstm_train_result = None
+        self.backtest_model_path = None
+        
     def initLayouts(self):
         base_layout = QHBoxLayout()
         self.chart_layout = QVBoxLayout()
@@ -85,6 +89,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_sl_input = QLineEdit(self)
         self.backtest_tsl_input = QLineEdit(self)
         self.backtest_tp_input = QLineEdit(self)
+        self.bakctest_fee_input = QLineEdit(self)
         self.backtest_guarantee_checkbox = QCheckBox('Guarantee', self)
         self.backtest_plot = canvas.RealTimePlot()
     
@@ -112,9 +117,15 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_sl_input.setValidator(val_int)
         self.backtest_tsl_input.setValidator(val_int)
         self.backtest_tp_input.setValidator(val_int)
+        self.bakctest_fee_input.setValidator(val_int)
         self.backtest_sl_input.setPlaceholderText("Stop-loss %")
         self.backtest_tsl_input.setPlaceholderText("Trail Stop-loss %")
         self.backtest_tp_input.setPlaceholderText("Take-profit %")
+        self.bakctest_fee_input.setPlaceholderText("Fee %")
+        self.backtest_sl_input.setText("015")
+        self.backtest_tsl_input.setText("")
+        self.backtest_tp_input.setText("045")
+        self.bakctest_fee_input.setText("0025")
         self.backtest_guarantee_checkbox.setChecked(True)
         self.backtest_trade_status_label.setFont(QFont('Arial', 13))
         
@@ -136,10 +147,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.createUI()
         self.setDetails()
         self.connectActions()
-        
-        self.dnn_train_result = None
-        self.lstm_train_result = None
-        self.backtest_model_path = None
         
         self.dnn_control_btns_layout.addWidget(self.dnn_run_btn)
         self.dnn_control_btns_layout.addWidget(self.dnn_get_info_btn)
@@ -167,6 +174,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_input_layout.addWidget(self.backtest_sl_input)
         self.backtest_control_input_layout.addWidget(self.backtest_tsl_input)
         self.backtest_control_input_layout.addWidget(self.backtest_tp_input)
+        self.backtest_control_input_layout.addWidget(self.bakctest_fee_input)
         self.backtest_control_input_layout.addWidget(self.backtest_guarantee_checkbox)
         self.backtest_control_layout.addWidget(self.backtest_trade_status_label)
         
@@ -255,6 +263,14 @@ class MyApp(QMainWindow, window_handler.Handler):
     def backtest_run_btn_clicked(self):
         symbol = self.backtest_option_symbol_input.text().strip()
         amount = int(self.backtest_option_amount_input.text())
+        sl = float("0."+self.backtest_sl_input.text())
+        sl = None if sl == 0.0 else sl
+        tsl = float("0."+self.backtest_tsl_input.text())
+        tsl = None if tsl == 0.0 else tsl
+        tp = float("0."+self.backtest_tp_input.text())
+        tp = None if tp == 0.0 else tp
+        fee = float("0."+self.bakctest_fee_input.text())
+
         target = symbol + '_Price'
         symbols = [symbol]
         features = [target, 'r', 's', 'm', 'v']
@@ -268,7 +284,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         model = models.load(self.backtest_model_path)
         self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 0.1)
         self.btt.signal.connect(self.handle_backtest_result)
-        self.btt.set_backtest_strategy(model, amount)
+        self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee)
         self.btt.start()
     
     def backtest_new_model_btn_clicked(self):
