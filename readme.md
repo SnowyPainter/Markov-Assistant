@@ -1,12 +1,23 @@
 # Markov
 
 ## Markov trading system supports
-* Short-Term stock price's up & down prediction
-* Long-Term stock price's movement
-* Custom Trading Bot
-* Simulating Trading Strategy
+* Short-Term stock price's up & down prediction (customizable)
+* Long-Term stock price's movement (customizable)
+* Trading Bot (customizable)
+* Simulating Trading Strategy with price, log rate return, rolling(20) mean and rolling(20) std
 
-## Installing Environment
+## Program Consists of:
+
+### Main Window
+
+
+### Train New RL Window
+
+
+### Training Result Window
+You can check your model fit well, while you pass some parameters.
+
+### Installing Environment
 * CUDA: 12.4
 * Python: 3.9.12
 * Keras: 2.15.0

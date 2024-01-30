@@ -10,6 +10,7 @@ class TrainRLModelWindow(QDialog):
         self.center()
         self.setWindowTitle("Training New RL Model for Backtesting")
         self.initUI()
+        self.is_learning = False
     def initUI(self):
         layout = QVBoxLayout()
         val_int = QIntValidator()

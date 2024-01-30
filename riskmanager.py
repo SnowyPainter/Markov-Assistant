@@ -99,7 +99,7 @@ class RiskManager():
                 infos = []
                 self.wait = max(0, self.wait - 1)
                 date, price = self.get_date_price(bar)
-                # stop loss order
+
                 if sl is not None and self.position != 0:
                     rc = (price - self.entry_price) / self.entry_price
                     if self.position == 1 and rc < -self.sl:
@@ -123,26 +123,24 @@ class RiskManager():
                         self.wait = wait
                         self.position = 0
 
-                # trailing stop loss order
                 if tsl is not None and self.position != 0:
                     self.max_price = max(self.max_price, price)
                     self.min_price = min(self.min_price, price)
-                    rc_1 = (price - self.max_price) / self.entry_price
-                    rc_2 = (self.min_price - price) / self.entry_price
-                    if self.position == 1 and rc_1 < -self.tsl:
+                    sell_rc = (price - self.max_price) / self.entry_price
+                    buy_rc = (self.min_price - price) / self.entry_price
+                    if self.position == 1 and sell_rc < -self.tsl:
                         tpinfo = self.place_sell_order(bar, units=self.units)
-                        tpinfo.set_trailing_stoploss(rc_1, tradeinfo.TradePosition.LONG)
+                        tpinfo.set_trailing_stoploss(sell_rc, tradeinfo.TradePosition.LONG)
                         infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
-                    elif self.position == -1 and rc_2 < -self.tsl:
+                    elif self.position == -1 and buy_rc < -self.tsl:
                         tpinfo = self.place_buy_order(bar, units=-self.units)
-                        tpinfo.set_trailing_stoploss(rc_2, tradeinfo.TradePosition.SHORT)
+                        tpinfo.set_trailing_stoploss(buy_rc, tradeinfo.TradePosition.SHORT)
                         infos.append(tpinfo)
                         self.wait = wait
                         self.position = 0
 
-                # take profit order
                 if tp is not None and self.position != 0:
                     rc = (price - self.entry_price) / self.entry_price
                     if self.position == 1 and rc > self.tp:
