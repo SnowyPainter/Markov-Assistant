@@ -9,13 +9,12 @@
 ## Program Consists of:
 
 ### Main Window
-
+![MainWindow](./readme_resources/main_window.png)
+You can take information whatever stock you want.
 
 ### Train New RL Window
-
-
-### Training Result Window
-You can check your model fit well, while you pass some parameters.
+![TrainNewRLWindow](./readme_resources/newrlmodel_window.png)
+You can make your own RL model right here.
 
 ### Installing Environment
 * CUDA: 12.4
