@@ -1,6 +1,7 @@
 import sys, datetime
 import data, models, QTBacktest, resources.canvas as canvas
 import handlers.window_handler as window_handler
+import pandas as pd
 from train_result_window import *
 from train_rlmodel_window import *
 from PyQt5.QtWidgets import *
@@ -12,7 +13,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         super().__init__()
         self.windows = []
         self.initUI()
-        
         self.dnn_train_result = None
         self.lstm_train_result = None
         self.backtest_model_path = None
@@ -38,6 +38,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_option_layout = QHBoxLayout()
         self.backtest_control_btn_layout = QHBoxLayout()
         self.backtest_control_input_layout = QHBoxLayout()
+        self.backtest_control_simulate_layout = QHBoxLayout()
         
         self.lstm_layout.addLayout(self.lstm_panel_layout)
         self.lstm_layout.addLayout(self.lstm_control_layout)
@@ -54,6 +55,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_layout.addLayout(self.backtest_control_btn_layout)
         self.backtest_control_layout.addLayout(self.backtest_control_option_layout)
         self.backtest_control_layout.addLayout(self.backtest_control_input_layout)
+        self.backtest_control_layout.addLayout(self.backtest_control_simulate_layout)
         self.backtest_layout.addLayout(self.backtest_panel_layout)
         self.backtest_layout.addLayout(self.backtest_control_layout)
         
@@ -78,7 +80,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.lstm_lags_input = QLineEdit(self)
         self.lstm_plot = canvas.StaticPlot()
         
-        self.backtest_opened_model_label = QLabel("Not opened any model", self)
+        self.backtest_opened_model_label = QLabel("There's no opened any model", self)
         self.backtest_trade_status_label = QLabel("TRADE STATUS", self)
         self.backtest_stop_btn = QPushButton("Stop", self)
         self.backtest_run_btn = QPushButton("Run", self)
@@ -92,8 +94,14 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.bakctest_fee_input = QLineEdit(self)
         self.backtest_guarantee_checkbox = QCheckBox('Guarantee', self)
         self.backtest_plot = canvas.RealTimePlot()
+        self.backtest_simulate_checkbox = QCheckBox('Simulate')
+        self.backtest_simulate_day_before_label = QLabel('Day Before:')
+        self.backtest_simulate_day_before_input = QLineEdit()
+        self.backtest_simulate_period_label = QLabel('Period:')
+        self.backtest_simulate_period_input = QLineEdit()
     
     def setDetails(self):
+        self.backtest_simulate = True
         val_int = QIntValidator()
         self.dnn_stocks_input.setPlaceholderText("Split stock code with comma.")
         self.lstm_stocks_input.setPlaceholderText("Split stock code with comma.")
@@ -128,6 +136,12 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.bakctest_fee_input.setText("0025")
         self.backtest_guarantee_checkbox.setChecked(True)
         self.backtest_trade_status_label.setFont(QFont('Arial', 13))
+        self.backtest_simulate_checkbox.setChecked(self.backtest_simulate)
+        self.backtest_simulate_day_before_input.setValidator(val_int)
+        self.backtest_simulate_day_before_input.setText("10")
+        self.backtest_simulate_day_before_input.setEnabled(self.backtest_simulate)
+        self.backtest_simulate_period_input.setText("5m")
+        self.backtest_simulate_period_input.setEnabled(self.backtest_simulate)
         
     def connectActions(self):
         self.dnn_run_btn.clicked.connect(self.dnn_run_btn_clicked)
@@ -138,6 +152,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_run_btn.clicked.connect(self.backtest_run_btn_clicked)
         self.backtest_new_model_btn.clicked.connect(self.backtest_new_model_btn_clicked)
         self.backtest_open_model_btn.clicked.connect(self.backtest_open_model_btn_clicked)
+        self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
         
     def initUI(self):
         self.setWindowTitle('Markov')
@@ -177,6 +192,11 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_input_layout.addWidget(self.bakctest_fee_input)
         self.backtest_control_input_layout.addWidget(self.backtest_guarantee_checkbox)
         self.backtest_control_layout.addWidget(self.backtest_trade_status_label)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_checkbox)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_day_before_label)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_day_before_input)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_label)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_input)
         
         widget = QWidget()
         widget.setLayout(base_layout)
@@ -261,6 +281,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         QMessageBox.information(self, "Stop Trade", "Stopped Trading with realtime data.")
     
     def backtest_run_btn_clicked(self):
+        if self.handle_model_path_error(self.backtest_model_path) == -1:
+            return
+        
         symbol = self.backtest_option_symbol_input.text().strip()
         amount = int(self.backtest_option_amount_input.text())
         sl = float("0."+self.backtest_sl_input.text())
@@ -274,17 +297,22 @@ class MyApp(QMainWindow, window_handler.Handler):
         target = symbol + '_Price'
         symbols = [symbol]
         features = [target, 'r', 's', 'm', 'v']
-        df = data.create_dataset(symbols, start=data.today_before(10), end=data.today(), interval='5m')
-        if self.handle_backtest_init_error(self.backtest_model_path, df) == -1:
-            return
+        df = pd.DataFrame({target:[], 'Datetime':[]})
+        df.set_index('Datetime')
+        if self.backtest_simulate:
+            daybefore = int(self.backtest_simulate_day_before_input.text())
+            period = self.backtest_simulate_period_input.text()
+            df = data.create_dataset(symbols, start=data.today_before(daybefore), end=data.today(), interval=period)
+            if self.handle_flaw_dataset(df) == -1:
+                return
         self.backtest_plot.clear()
         self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
         self.backtest_trade_status_label.setText("TRADE STATUS")
         
         model = models.load(self.backtest_model_path)
-        self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 0.1)
+        self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 1)
         self.btt.signal.connect(self.handle_backtest_result)
-        self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee)
+        self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate))
         self.btt.start()
     
     def backtest_new_model_btn_clicked(self):
@@ -298,7 +326,16 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_opened_model_label.setText(fname)
         self.backtest_model_path = fname
         
-    
+    def toggle_simulation(self, state):
+        if state == 2:
+            self.backtest_simulate = True
+            self.backtest_simulate_day_before_input.setEnabled(True)
+            self.backtest_simulate_period_input.setEnabled(True)
+        else:
+            self.backtest_simulate = False
+            self.backtest_simulate_day_before_input.setEnabled(False)
+            self.backtest_simulate_period_input.setEnabled(False)
+            
 if __name__ == '__main__':
    app = QApplication(sys.argv)
    #app.setStyleSheet(open('./resources/style.qss', 'r').read())

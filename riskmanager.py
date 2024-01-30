@@ -91,7 +91,7 @@ class RiskManager():
         
         bar = self.env.lags
         while bar < len(self.env.data) or self.waiting:
-            if bar == len(self.env.data):
+            if bar >= len(self.env.data): #data size is less than bar, wait for appending data or just waiting realtime data. for start.
                 info = tradeinfo.TradeInfo(datetime.datetime.now())
                 info.set_info_type(tradeinfo.InfoType.WAITFORNEWDATA)
                 yield [info]

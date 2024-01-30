@@ -51,11 +51,9 @@ class Handler:
             self.show_error(f"Dataset made from your symbols is empty. Check your symbols")
             return -1
         return 0
-    def handle_backtest_init_error(self, model_path, df):
+    def handle_model_path_error(self, model_path):
         if model_path == None or not os.path.isfile(model_path):
             self.show_error(f"Model path {model_path} is not available.")
-            return -1
-        if self.handle_flaw_dataset(df) == -1:
             return -1
         return 0
             

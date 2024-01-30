@@ -21,8 +21,8 @@ class BacktestThread(QThread):
     def stop_trade(self):
         self.bt.waiting = False
         
-    def set_backtest_strategy(self, model, amount, fee=0.0025, sl=0.015, tsl=None, tp=0.045, guarantee=True):
-        self.bt = riskmanager.RiskManager(self.env, model, amount, fee, 0, waiting=True)
+    def set_backtest_strategy(self, model, amount, fee=0.0025, sl=0.015, tsl=None, tp=0.045, guarantee=True, continue_to_realtime=False):
+        self.bt = riskmanager.RiskManager(self.env, model, amount, fee, 0, waiting=continue_to_realtime)
         self.sl = sl
         self.tsl = tsl
         self.tp = tp
