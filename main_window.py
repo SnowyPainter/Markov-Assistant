@@ -320,7 +320,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         sub.exec_()
         
     def backtest_open_model_btn_clicked(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './')[0]
+        fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './', "Keras (*.keras)")[0]
         if fname == '':
             return
         self.backtest_opened_model_label.setText(fname)

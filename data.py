@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
-import pandas_datareader as web
 import pytz
 from datetime import datetime, timedelta, time
 
