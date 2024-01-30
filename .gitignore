@@ -1,3 +1,6 @@
 __pycache__
 models/*
 *.keras
+build
+dist
+main_window.spec

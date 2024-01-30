@@ -338,7 +338,7 @@ class MyApp(QMainWindow, window_handler.Handler):
             
 if __name__ == '__main__':
    app = QApplication(sys.argv)
-   #app.setStyleSheet(open('./resources/style.qss', 'r').read())
+   app.setStyleSheet(open('./resources/style.qss', 'r').read())
    ex = MyApp()
    ex.show()
    sys.exit(app.exec_())
