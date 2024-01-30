@@ -4,7 +4,7 @@
 * Short-Term stock price's up & down prediction (customizable)
 * Long-Term stock price's movement (customizable)
 * Trading Bot (customizable)
-* Simulating Trading Strategy with price, log rate return, rolling(20) mean and rolling(20) std
+* Simulating Trading Strategy with price, log rate return, SMA and VOL
 
 ## Program Consists of:
 
