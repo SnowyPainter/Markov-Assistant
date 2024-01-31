@@ -88,6 +88,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_open_model_btn = QPushButton("Open", self)
         self.backtest_option_symbol_input = QLineEdit(self)
         self.backtest_option_amount_input = QLineEdit(self)
+        self.backtest_option_lags_input = QLineEdit(self)
         self.backtest_sl_input = QLineEdit(self)
         self.backtest_tsl_input = QLineEdit(self)
         self.backtest_tp_input = QLineEdit(self)
@@ -122,6 +123,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_option_symbol_input.setText("nvda")
         self.backtest_option_amount_input.setValidator(val_int)
         self.backtest_option_amount_input.setText("10000")
+        self.backtest_option_lags_input.setValidator(val_int)
+        self.backtest_option_lags_input.setPlaceholderText("Lags")
+        self.backtest_option_lags_input.setText("3")
         self.backtest_sl_input.setValidator(val_int)
         self.backtest_tsl_input.setValidator(val_int)
         self.backtest_tp_input.setValidator(val_int)
@@ -186,6 +190,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_btn_layout.addWidget(self.backtest_open_model_btn)
         self.backtest_control_option_layout.addWidget(self.backtest_option_symbol_input)
         self.backtest_control_option_layout.addWidget(self.backtest_option_amount_input)
+        self.backtest_control_option_layout.addWidget(self.backtest_option_lags_input)
         self.backtest_control_input_layout.addWidget(self.backtest_sl_input)
         self.backtest_control_input_layout.addWidget(self.backtest_tsl_input)
         self.backtest_control_input_layout.addWidget(self.backtest_tp_input)
@@ -286,6 +291,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         
         symbol = self.backtest_option_symbol_input.text().strip()
         amount = int(self.backtest_option_amount_input.text())
+        lags = int(self.backtest_option_lags_input.text())
+        if lags < 1:
+            lags = 1
         sl = float("0."+self.backtest_sl_input.text())
         sl = None if sl == 0.0 else sl
         tsl = float("0."+self.backtest_tsl_input.text())
@@ -310,7 +318,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_trade_status_label.setText("TRADE STATUS")
         
         model = models.load(self.backtest_model_path)
-        self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 1)
+        self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 1, lags=lags)
         self.btt.signal.connect(self.handle_backtest_result)
         self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate))
         self.btt.start()

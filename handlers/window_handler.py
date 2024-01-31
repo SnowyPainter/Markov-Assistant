@@ -27,7 +27,7 @@ class Handler:
             self.backtest_trade_status_label.setText(f"{position} : {ttype} {units} for {price}, {p}")
             date = datetime.datetime.strptime(date, '%Y-%m-%d')
             self.backtest_plot.update_plot(date, net_wealth)
-        elif(infotype == tradeinfo.InfoType.CLOSINGOUT):
+        elif(infotype == tradeinfo.InfoType.CLOSINGOUT or self.btt.stopped):
             self.previous_net_wealth = net_wealth
             QMessageBox.information(self, 'CLOSED OUT', f'performance : {info.performance}, net : {net_wealth}')
     
