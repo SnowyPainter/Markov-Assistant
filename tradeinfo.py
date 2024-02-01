@@ -10,6 +10,7 @@ class InfoType(Enum):
 class TradeType(Enum):
     BUY = 1
     SELL = 2
+    NONE = 3
 class TradePosition(Enum):
     LONG = 1
     SHORT = 2

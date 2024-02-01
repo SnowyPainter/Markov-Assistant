@@ -1,6 +1,7 @@
 import sys, datetime
 import data, models, QTBacktest, resources.canvas as canvas
 import handlers.window_handler as window_handler
+from placeorder_window import *
 import pandas as pd
 from train_result_window import *
 from train_rlmodel_window import *
@@ -100,6 +101,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_day_before_input = QLineEdit()
         self.backtest_simulate_period_label = QLabel('Period:')
         self.backtest_simulate_period_input = QLineEdit()
+        self.backtest_realtime_placeorder_btn = QPushButton("Place Order", self)
     
     def setDetails(self):
         self.backtest_simulate = True
@@ -146,6 +148,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_day_before_input.setEnabled(self.backtest_simulate)
         self.backtest_simulate_period_input.setText("5m")
         self.backtest_simulate_period_input.setEnabled(self.backtest_simulate)
+        self.backtest_realtime_placeorder_btn.setEnabled(not self.backtest_simulate)
         
     def connectActions(self):
         self.dnn_run_btn.clicked.connect(self.dnn_run_btn_clicked)
@@ -157,6 +160,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_new_model_btn.clicked.connect(self.backtest_new_model_btn_clicked)
         self.backtest_open_model_btn.clicked.connect(self.backtest_open_model_btn_clicked)
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
+        self.backtest_realtime_placeorder_btn.clicked.connect(self.backtest_realtime_placeorder_btn_cliked)
         
     def initUI(self):
         self.setWindowTitle('Markov')
@@ -202,6 +206,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_day_before_input)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_label)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_input)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_placeorder_btn)
         
         widget = QWidget()
         widget.setLayout(base_layout)
@@ -339,11 +344,20 @@ class MyApp(QMainWindow, window_handler.Handler):
             self.backtest_simulate = True
             self.backtest_simulate_day_before_input.setEnabled(True)
             self.backtest_simulate_period_input.setEnabled(True)
+            self.backtest_realtime_placeorder_btn.setEnabled(False)
         else:
             self.backtest_simulate = False
             self.backtest_simulate_day_before_input.setEnabled(False)
             self.backtest_simulate_period_input.setEnabled(False)
-            
+            self.backtest_realtime_placeorder_btn.setEnabled(True)
+    
+    def backtest_realtime_placeorder_btn_cliked(self):
+        symbol = self.backtest_option_symbol_input.text().strip()
+        window = PlaceOrderWindow()
+        self.windows.append(window)
+        window.initUI(symbol)
+        window.show()
+    
 if __name__ == '__main__':
    app = QApplication(sys.argv)
    app.setStyleSheet(open('./resources/style.qss', 'r').read())

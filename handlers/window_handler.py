@@ -1,5 +1,6 @@
 import sys, datetime, os
 import tradeinfo
+import logger
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -27,8 +28,10 @@ class Handler:
             self.backtest_trade_status_label.setText(f"{position} : {ttype} {units} for {price}, {p}")
             date = datetime.datetime.strptime(date, '%Y-%m-%d')
             self.backtest_plot.update_plot(date, net_wealth)
+            logger.log_backtest(net_wealth, date, infotype=infotype, position=position, tradetype=action, p=p, units=units, price=price)
         elif(infotype == tradeinfo.InfoType.CLOSINGOUT or self.btt.stopped):
             self.previous_net_wealth = net_wealth
+            logger.log_backtest(net_wealth, date, infotype=infotype)
             QMessageBox.information(self, 'CLOSED OUT', f'performance : {info.performance}, net : {net_wealth}')
     
     def show_error(self, message):
