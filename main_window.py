@@ -19,11 +19,14 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.lstm_train_result = None
         self.backtest_model_path = None
         self.loadOptions()
+        self.loadRecentNetWealth()
     
     def loadRecentNetWealth(self):
         try:
             with open('./log/backtest.json', 'r') as file:
                 data = json.load(file)
+                net_wealth = data[-1]["net_wealth"]
+                self.backtest_option_amount_input.setText(str(net_wealth))
         except:
             self.backtest_option_amount_input.setText("10000")
         

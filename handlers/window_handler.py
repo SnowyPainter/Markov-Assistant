@@ -7,14 +7,14 @@ import logger
 
 class Handler:
     def handle_backtest_result(self, info):
-        net_wealth = self.btt.bt.net_wealths[-1][1]
+        net_wealth = round(self.btt.bt.net_wealths[-1][1], 4)
         date = self.btt.bt.net_wealths[-1][0]
         infotype = info.info_type
         position = info.trade_position
         
         if infotype == tradeinfo.InfoType.TAKEPROFIT or infotype == tradeinfo.InfoType.STOPLOSS or infotype == tradeinfo.InfoType.TRAILSTOPLOSS:
             units = info.units
-            price = info.price
+            price = round(info.price, 2)
             action = info.trade_type
             ttype = "buy" if action == tradeinfo.TradeType.BUY else "sell"
             p = 0
