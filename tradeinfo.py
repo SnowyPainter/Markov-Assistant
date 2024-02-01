@@ -1,17 +1,17 @@
-from enum import Enum
+from enum import IntEnum
 
-class InfoType(Enum):
+class InfoType(IntEnum):
     STOPLOSS = 1
     TRAILSTOPLOSS = 2
     TAKEPROFIT = 3
     CLOSINGOUT = 4
     NONE = 5
     WAITFORNEWDATA = 6
-class TradeType(Enum):
+class TradeType(IntEnum):
     BUY = 1
     SELL = 2
     NONE = 3
-class TradePosition(Enum):
+class TradePosition(IntEnum):
     LONG = 1
     SHORT = 2
     NONE = 3

@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import sys, os, json
-import handlers.logger as logger
+import logger as logger
 
 class PlaceOrderWindow(QWidget):
     def __init__(self):

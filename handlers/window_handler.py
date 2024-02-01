@@ -1,9 +1,9 @@
 import sys, datetime, os
 import tradeinfo
-import logger
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
+import logger
 
 class Handler:
     def handle_backtest_result(self, info):
@@ -24,11 +24,13 @@ class Handler:
                 p = info.stoploss
             elif infotype == tradeinfo.InfoType.TRAILSTOPLOSS:
                 p = info.stoploss
-            position = "LONG" if position == tradeinfo.TradePosition.LONG else "SHORT"
-            self.backtest_trade_status_label.setText(f"{position} : {ttype} {units} for {price}, {p}")
-            date = datetime.datetime.strptime(date, '%Y-%m-%d')
+            pos = "LONG" if position == tradeinfo.TradePosition.LONG else "SHORT"
+            self.backtest_trade_status_label.setText(f"{pos} : {ttype} {units} for {price}, {p}")
+            str_date = date
+            date = datetime.datetime.strptime(str_date, '%Y-%m-%d').strftime("%Y-%m-%d %H:%M:%S")
+            date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
             self.backtest_plot.update_plot(date, net_wealth)
-            logger.log_backtest(net_wealth, date, infotype=infotype, position=position, tradetype=action, p=p, units=units, price=price)
+            logger.log_backtest(net_wealth, str_date, infotype=int(infotype), position=int(position), tradetype=int(action), p=p, units=units, price=price)
         elif(infotype == tradeinfo.InfoType.CLOSINGOUT or self.btt.stopped):
             self.previous_net_wealth = net_wealth
             logger.log_backtest(net_wealth, date, infotype=infotype)

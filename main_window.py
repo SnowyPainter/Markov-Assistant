@@ -3,6 +3,7 @@ import data, models, QTBacktest, resources.canvas as canvas
 import handlers.window_handler as window_handler
 from placeorder_window import *
 import pandas as pd
+import os, json
 from train_result_window import *
 from train_rlmodel_window import *
 from PyQt5.QtWidgets import *
@@ -13,11 +14,36 @@ class MyApp(QMainWindow, window_handler.Handler):
     def __init__(self):
         super().__init__()
         self.windows = []
-        self.initUI()
+        self.addWidgets()
         self.dnn_train_result = None
         self.lstm_train_result = None
         self.backtest_model_path = None
+        self.loadOptions()
+    
+    def loadRecentNetWealth(self):
+        try:
+            with open('./log/backtest.json', 'r') as file:
+                data = json.load(file)
+        except:
+            self.backtest_option_amount_input.setText("10000")
         
+    def loadOptions(self):
+        if not os.path.exists('options.json'):
+            default_values = {
+                "trailing stop loss": "",
+                "stop loss": "015",
+                "take profit": "045",
+                "fee": "0025"
+            }
+            with open('options.json', 'w') as file:
+                json.dump(default_values, file, indent=2)
+        with open('options.json', 'r') as file:
+            data = json.load(file)
+            self.backtest_tsl_input.setText(data.get("trailing stop loss", ""))
+            self.backtest_sl_input.setText(data.get("stop loss", ""))
+            self.backtest_tp_input.setText(data.get("take profit", ""))
+            self.bakctest_fee_input.setText(data.get("fee", ""))
+    
     def initLayouts(self):
         base_layout = QHBoxLayout()
         self.chart_layout = QVBoxLayout()
@@ -106,6 +132,7 @@ class MyApp(QMainWindow, window_handler.Handler):
     def setDetails(self):
         self.backtest_simulate = True
         val_int = QIntValidator()
+        
         self.dnn_stocks_input.setPlaceholderText("Split stock code with comma.")
         self.lstm_stocks_input.setPlaceholderText("Split stock code with comma.")
         self.dnn_target_stock_input.setPlaceholderText("Prediction target stock (only 1)")
@@ -123,7 +150,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
         self.backtest_option_symbol_input.setPlaceholderText("Target symbol for Backtesting")
         self.backtest_option_symbol_input.setText("nvda")
-        self.backtest_option_amount_input.setValidator(val_int)
         self.backtest_option_amount_input.setText("10000")
         self.backtest_option_lags_input.setValidator(val_int)
         self.backtest_option_lags_input.setPlaceholderText("Lags")
@@ -162,7 +188,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
         self.backtest_realtime_placeorder_btn.clicked.connect(self.backtest_realtime_placeorder_btn_cliked)
         
-    def initUI(self):
+    def addWidgets(self):
         self.setWindowTitle('Markov')
         self.resize(1600, 800)
         self.center()

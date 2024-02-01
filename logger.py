@@ -27,7 +27,7 @@ def log_backtest(net_wealth, date, infotype=5, position=3, tradetype=3, p=0, uni
             logs = json.load(f)
     except FileNotFoundError:
         logs = []
-    backtest_log = {"net_wealth": net_wealth, "date": date, "infotype":infotype, "position":position, "tradetype":tradetype, "p":p, "units":units, "price":price}
+    backtest_log = {"net_wealth": net_wealth, "date":date,"infotype":infotype, "position":position, "tradetype":tradetype, "p":p, "units":units, "price":price}
     logs.append(backtest_log)
     with open("./log/backtest.json", "w") as f:
         json.dump(logs, f, indent=2)
