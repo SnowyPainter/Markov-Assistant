@@ -5,7 +5,7 @@ import sys, os, json
 
 def log_trade(stock, action, units, price):
     if not units or not price:
-        QMessageBox.information("Please put informations about stock.")
+        QMessageBox.information(None, "Error", "Please put informations about stock.")
         return
     if not os.path.exists("./log"):
         os.makedirs("./log")
@@ -14,10 +14,19 @@ def log_trade(stock, action, units, price):
             logs = json.load(f)
     except FileNotFoundError:
         logs = []
-    trade_log = {"action": action, "stock":stock,"units": units, "price": round(price, 2)}
+    trade_log = {"action": action, "stock":stock,"units": units, "price": round(float(price), 2)}
     logs.append(trade_log)
     with open("./log/orders.json", "w") as f:
         json.dump(logs, f, indent=2)
+
+def read_all_trades():
+    if not os.path.exists("./log/orders.json"):
+        QMessageBox.information(None, "Error", "There's no trades you did.")
+        return []
+
+    with open("./log/orders.json", "r") as f:
+        logs = json.load(f)
+    return logs
 
 def log_backtest(net_wealth, date, infotype=5, position=3, tradetype=3, p=0, units=0, price=0):
     if not os.path.exists("./log"):

@@ -131,6 +131,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_period_label = QLabel('Period:')
         self.backtest_simulate_period_input = QLineEdit()
         self.backtest_realtime_placeorder_btn = QPushButton("Place Order", self)
+        self.backtest_realtime_aggregate_btn = QPushButton("Aggregate", self)
     
     def setDetails(self):
         self.backtest_simulate = True
@@ -190,6 +191,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_open_model_btn.clicked.connect(self.backtest_open_model_btn_clicked)
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
         self.backtest_realtime_placeorder_btn.clicked.connect(self.backtest_realtime_placeorder_btn_cliked)
+        self.backtest_realtime_aggregate_btn.clicked.connect(self.backtest_realtime_aggregate_btn_clicked)
         
     def addWidgets(self):
         self.setWindowTitle('Markov')
@@ -236,6 +238,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_label)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_input)
         self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_placeorder_btn)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_aggregate_btn)
         
         widget = QWidget()
         widget.setLayout(base_layout)
@@ -386,6 +389,21 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.windows.append(window)
         window.initUI(symbol)
         window.show()
+    
+    def backtest_realtime_aggregate_btn_clicked(self):
+        logs = logger.read_all_trades()
+        stock = self.backtest_option_symbol_input.text().strip()
+        logs = [item for item in logs if item.get("stock") == stock]
+        profit = 0
+        for item in logs:
+            action = item.get("action")
+            units = float(item.get('units'))
+            price = float(item.get("price"))
+            if action == "buy":
+                profit -= (units * price)
+            if action == "sell":
+                profit += ((units * price) * (1-float("0."+self.bakctest_fee_input.text())))
+        QMessageBox.information(self, "Self-Trading Profit", f"Profit: {profit}")
     
 if __name__ == '__main__':
    app = QApplication(sys.argv)
