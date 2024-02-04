@@ -61,7 +61,7 @@ class PlotCanvas(FigureCanvas):
 
         self.x_data = []
         self.y_data = []
-
+        self.destroy_prev = True
         self.line, = self.axes.plot(self.x_data, self.y_data, marker='o')
         
     def set_major_formatter(self, dateformat):
@@ -73,7 +73,7 @@ class PlotCanvas(FigureCanvas):
     def add_data(self, x, y):
         self.x_data.append(x)
         self.y_data.append(y)
-        if len(self.x_data) > 10:
+        if len(self.x_data) > 10 and self.destroy_prev:
             self.x_data = self.x_data[-10:]
             self.y_data = self.y_data[-10:]
         self.line.set_xdata(self.x_data)
@@ -82,6 +82,9 @@ class PlotCanvas(FigureCanvas):
         self.axes.autoscale_view()
 
         self.draw()
+        
+    def add_text_at_value(self, text, x, y=0, color="black"):
+        self.axes.annotate(text, xy=(x, y), xytext=(x, y-4),ha='center', va='top', arrowprops=dict(facecolor=color, shrink=0.05))
 
     def clear(self):
         self.axes.clear()

@@ -20,6 +20,27 @@ class TradePosition(IntEnum):
 def wait_for_data():
     ti = TradeInfo(data.today())
     ti.set_info_type(InfoType.WAITFORNEWDATA)
+    ti.set_trade_type(TradeType.NONE)
+    return ti
+
+def none():
+    ti = TradeInfo(data.today())
+    ti.set_info_type(InfoType.NONE)
+    ti.set_trade_type(TradeType.NONE)
+    return ti
+
+def buy(price):
+    ti = TradeInfo(data.today())
+    ti.set_price(price)
+    ti.set_trade_position(TradePosition.LONG)
+    ti.set_trade_type(TradeType.BUY)
+    return ti
+
+def sell(price):
+    ti = TradeInfo(data.today())
+    ti.set_price(price)
+    ti.set_trade_position(TradePosition.SHORT)
+    ti.set_trade_type(TradeType.SELL)
     return ti
 
 class TradeInfo:

@@ -201,19 +201,16 @@ class MonitorStock:
         self.stop = False
     def _reshape(self, state):
         return np.reshape(state, [1, self.env.lags, self.env.n_features])
+    
     def get_date_price(self, bar):
         date = str(self.env.data.index[bar])[:10]
         price = self.env.data[self.env.symbol].iloc[bar]
         return date, price
     
-    def stop(self):
+    def stop_monitor(self):
         self.stop = True
     
-    def monitor(self, sl, tsl, tp, guarantee):
-        self.sl = sl
-        self.tsl = tsl
-        self.tp = tp
-        self.guarantee = guarantee
+    def monitor(self):
         self.position = 0 # none
         self.bar = self.env.lags
         
@@ -226,8 +223,18 @@ class MonitorStock:
             action = np.argmax(self.model.predict(self._reshape(state.values), verbose=0)[0, 0])
             position = 1 if action == 1 else -1 #1 = buy, -1 = sell
             
-            print(position)
+            date, price = self.get_date_price(self.bar)
+            ti = tradeinfo.none()
+            ti.set_price(price)
+            
+            if self.position in [0, -1] and position == 1:
+                self.position = 1
+                ti = tradeinfo.buy(price)
+            elif self.position in [0, 1] and position == -1:
+                self.position = -1
+                ti = tradeinfo.sell(price)
             
             self.bar += 1
+            yield ti
             
         

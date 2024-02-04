@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 
 class QTMonitorStockThread(QThread):
     signal = pyqtSignal(tradeinfo.TradeInfo)
-    def __init__(self, target_symbol, model, model_lags, interval_sec, sl, tsl, tp, guarantee):
+    def __init__(self, target_symbol, model, model_lags, interval_sec):
         super(QThread, self).__init__()
         target = target_symbol + '_Price'
         self.tickers = [target_symbol]
@@ -24,17 +24,13 @@ class QTMonitorStockThread(QThread):
                                 start=0, end=None)
         self.model = model
         self.interval_sec = interval_sec
-        self.sl = sl
-        self.tsl = tsl
-        self.tp = tp
-        self.guarantee = guarantee
     
     def stop(self):
-        self.monitor.stop()
+        self.monitor.stop_monitor()
     
     def run(self):
         self.monitor = riskmanager.MonitorStock(self.env, self.model)
-        for info in self.monitor.monitor(self.sl, self.tsl, self.tp, self.guarantee):
+        for info in self.monitor.monitor():
             self.monitor.env.append_raw(data.create_realtime_dataset(self.tickers))
             self.msleep(int(self.interval_sec * 1000))
             self.signal.emit(info)

@@ -40,3 +40,16 @@ def log_backtest(net_wealth, date, infotype=5, position=3, tradetype=3, p=0, uni
     logs.append(backtest_log)
     with open("./log/backtest.json", "w") as f:
         json.dump(logs, f, indent=2)
+        
+def log_monitor(date, price, tradetype):
+    if not os.path.exists("./log"):
+        os.makedirs("./log")
+    try:
+        with open("./log/monitor.json", "r") as f:
+            logs = json.load(f)
+    except FileNotFoundError:
+        logs = []
+    monitor_log = {"date": date, "price":price, "tradetype":tradetype}
+    logs.append(monitor_log)
+    with open("./log/monitor.json", "w") as f:
+        json.dump(logs, f, indent=2)
