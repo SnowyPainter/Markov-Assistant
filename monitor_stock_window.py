@@ -7,6 +7,7 @@ import models, resources.canvas as canvas
 class MonitorStockWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Monitor Stock")
         self.initUI()
         
     def initUI(self):
