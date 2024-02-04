@@ -1,4 +1,5 @@
 from enum import IntEnum
+import data
 
 class InfoType(IntEnum):
     STOPLOSS = 1
@@ -15,6 +16,11 @@ class TradePosition(IntEnum):
     LONG = 1
     SHORT = 2
     NONE = 3
+
+def wait_for_data():
+    ti = TradeInfo(data.today())
+    ti.set_info_type(InfoType.WAITFORNEWDATA)
+    return ti
 
 class TradeInfo:
     def __init__(self, date):

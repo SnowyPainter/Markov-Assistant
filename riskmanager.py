@@ -77,8 +77,7 @@ class RiskManager():
         infos.append(info)
         return infos
 
-    def backtest_strategy(self, sl=None, tsl=None, tp=None,
-                          wait=5, guarantee=False):
+    def backtest_strategy(self, sl=None, tsl=None, tp=None, wait=5, guarantee=False):
         self.units = 0
         self.position = 0
         self.trades = 0
@@ -194,3 +193,41 @@ class RiskManager():
         bar -= 1
 
         yield self.close_out(bar)
+        
+class MonitorStock:
+    def __init__(self, env, model):
+        self.env = env
+        self.model = model
+        self.stop = False
+    def _reshape(self, state):
+        return np.reshape(state, [1, self.env.lags, self.env.n_features])
+    def get_date_price(self, bar):
+        date = str(self.env.data.index[bar])[:10]
+        price = self.env.data[self.env.symbol].iloc[bar]
+        return date, price
+    
+    def stop(self):
+        self.stop = True
+    
+    def monitor(self, sl, tsl, tp, guarantee):
+        self.sl = sl
+        self.tsl = tsl
+        self.tp = tp
+        self.guarantee = guarantee
+        self.position = 0 # none
+        self.bar = self.env.lags
+        
+        while not self.stop:
+            if self.bar >= len(self.env.data) or len(self.env.data) < self.env.lags:
+                yield tradeinfo.wait_for_data()
+                continue
+            
+            state = self.env.get_state(self.bar)
+            action = np.argmax(self.model.predict(self._reshape(state.values), verbose=0)[0, 0])
+            position = 1 if action == 1 else -1 #1 = buy, -1 = sell
+            
+            print(position)
+            
+            self.bar += 1
+            
+        

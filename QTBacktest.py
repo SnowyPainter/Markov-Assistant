@@ -40,4 +40,3 @@ class BacktestThread(QThread):
                 continue
             for info in infos:
                 self.signal.emit(info)
-            

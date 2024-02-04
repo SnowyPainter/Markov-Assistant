@@ -6,6 +6,7 @@ import pandas as pd
 import os, json
 from train_result_window import *
 from train_rlmodel_window import *
+from monitor_stock_window import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -132,7 +133,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_period_input = QLineEdit()
         self.backtest_realtime_placeorder_btn = QPushButton("Place Order", self)
         self.backtest_realtime_aggregate_btn = QPushButton("Aggregate", self)
-    
+        self.backtest_realtime_monitor_btn = QPushButton("Monitor", self)
+        
     def setDetails(self):
         self.backtest_simulate = True
         val_int = QIntValidator()
@@ -179,6 +181,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_period_input.setText("5m")
         self.backtest_simulate_period_input.setEnabled(self.backtest_simulate)
         self.backtest_realtime_placeorder_btn.setEnabled(not self.backtest_simulate)
+        self.backtest_realtime_aggregate_btn.setEnabled(not self.backtest_simulate)
         
     def connectActions(self):
         self.dnn_run_btn.clicked.connect(self.dnn_run_btn_clicked)
@@ -192,6 +195,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
         self.backtest_realtime_placeorder_btn.clicked.connect(self.backtest_realtime_placeorder_btn_cliked)
         self.backtest_realtime_aggregate_btn.clicked.connect(self.backtest_realtime_aggregate_btn_clicked)
+        self.backtest_realtime_monitor_btn.clicked.connect(self.backtest_realtime_monitor_btn_clicked)
         
     def addWidgets(self):
         self.setWindowTitle('Markov')
@@ -239,6 +243,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_input)
         self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_placeorder_btn)
         self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_aggregate_btn)
+        self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_monitor_btn)
         
         widget = QWidget()
         widget.setLayout(base_layout)
@@ -377,11 +382,13 @@ class MyApp(QMainWindow, window_handler.Handler):
             self.backtest_simulate_day_before_input.setEnabled(True)
             self.backtest_simulate_period_input.setEnabled(True)
             self.backtest_realtime_placeorder_btn.setEnabled(False)
+            self.backtest_realtime_aggregate_btn.setEnabled(False)
         else:
             self.backtest_simulate = False
             self.backtest_simulate_day_before_input.setEnabled(False)
             self.backtest_simulate_period_input.setEnabled(False)
             self.backtest_realtime_placeorder_btn.setEnabled(True)
+            self.backtest_realtime_aggregate_btn.setEnabled(True)
     
     def backtest_realtime_placeorder_btn_cliked(self):
         symbol = self.backtest_option_symbol_input.text().strip()
@@ -404,6 +411,11 @@ class MyApp(QMainWindow, window_handler.Handler):
             if action == "sell":
                 profit += ((units * price) * (1-float("0."+self.bakctest_fee_input.text())))
         QMessageBox.information(self, "Self-Trading Profit", f"Profit: {profit}")
+    
+    def backtest_realtime_monitor_btn_clicked(self):
+        window = MonitorStockWindow()
+        self.windows.append(window)
+        window.show()
     
 if __name__ == '__main__':
    app = QApplication(sys.argv)
