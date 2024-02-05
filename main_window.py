@@ -328,6 +328,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         
         symbol = self.backtest_option_symbol_input.text().strip()
         amount = float(self.backtest_option_amount_input.text())
+        guarantee = self.backtest_guarantee_checkbox.isChecked()
         lags = int(self.backtest_option_lags_input.text())
         if lags < 1:
             lags = 1
@@ -357,7 +358,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         model = models.load(self.backtest_model_path)
         self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 1, lags=lags)
         self.btt.signal.connect(self.handle_backtest_result)
-        self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate))
+        self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate), guarantee=guarantee)
         self.backtesting = True
         self.btt.start()
     
