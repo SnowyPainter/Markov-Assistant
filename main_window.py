@@ -18,6 +18,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.dnn_train_result = None
         self.lstm_train_result = None
         self.backtest_model_path = None
+        self.backtesting = False
         self.loadOptions()
         self.loadRecentNetWealth()
     
@@ -315,15 +316,18 @@ class MyApp(QMainWindow, window_handler.Handler):
         sub.show()
         
     def backtest_stop_btn_clicked(self):
+        if not self.backtesting:
+            return
         self.btt.stop_trade()
+        self.backtesting = False
         QMessageBox.information(self, "Stop Trade", "Stopped Trading with realtime data.")
     
     def backtest_run_btn_clicked(self):
-        if self.handle_model_path_error(self.backtest_model_path) == -1:
+        if self.backtesting or self.handle_model_path_error(self.backtest_model_path) == -1:
             return
         
         symbol = self.backtest_option_symbol_input.text().strip()
-        amount = int(self.backtest_option_amount_input.text())
+        amount = float(self.backtest_option_amount_input.text())
         lags = int(self.backtest_option_lags_input.text())
         if lags < 1:
             lags = 1
@@ -354,6 +358,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 1, lags=lags)
         self.btt.signal.connect(self.handle_backtest_result)
         self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate))
+        self.backtesting = True
         self.btt.start()
     
     def backtest_new_model_btn_clicked(self):

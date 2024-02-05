@@ -33,6 +33,7 @@ class Handler:
             logger.log_backtest(net_wealth, str_date, infotype=int(infotype), position=int(position), tradetype=int(action), p=p, units=units, price=price)
         elif(infotype == tradeinfo.InfoType.CLOSINGOUT or self.btt.stopped):
             self.previous_net_wealth = net_wealth
+            self.backtesting = False
             logger.log_backtest(net_wealth, date, infotype=infotype)
             QMessageBox.information(self, 'CLOSED OUT', f'performance : {info.performance}, net : {net_wealth}')
     
