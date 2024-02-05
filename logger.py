@@ -21,11 +21,12 @@ def log_trade(stock, action, units, price):
 
 def read_all_trades():
     if not os.path.exists("./log/orders.json"):
-        QMessageBox.information(None, "Error", "There's no trades you did.")
         return []
-
-    with open("./log/orders.json", "r") as f:
-        logs = json.load(f)
+    try:
+        with open("./log/orders.json", "r") as f:
+            logs = json.load(f)
+    except:
+        return []
     return logs
 
 def log_backtest(net_wealth, date, infotype=5, position=3, tradetype=3, p=0, units=0, price=0):

@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import QTMonitorStock
+from placeorder_window import *
 import datetime, os
 import models, resources.canvas as canvas, tradeinfo, logger
 
@@ -11,8 +12,9 @@ class MonitorStockWindow(QWidget):
         self.setWindowTitle("Monitor Stock")
         self.resize(1024, 600)
         self.initUI()
+        self.windows = []
         
-    def initUI(self):
+    def initUI(self, init_symbol=""):
         val_int = QIntValidator()
         base_layout = QVBoxLayout()
         self.monitor_canvas = canvas.RealTimePlot()
@@ -25,6 +27,9 @@ class MonitorStockWindow(QWidget):
         self.model_lags_input = QLineEdit(self)
         self.update_interval_input = QLineEdit(self)
         
+        self.placeorder_btn = QPushButton("Place Order", self)
+        self.aggregate_btn = QPushButton("Aggregate", self)
+        
         self.run_btn = QPushButton("Run", self)
         self.stop_btn = QPushButton("Stop", self)
         
@@ -32,16 +37,19 @@ class MonitorStockWindow(QWidget):
         self.stop_btn.setEnabled(False)
         
         controls_layout = QVBoxLayout()
+        interact_layout = QHBoxLayout()
         env_info_layout = QHBoxLayout()
         runstop_layout = QHBoxLayout()
         
-        self.symbol_input.setText("nvda")
+        self.symbol_input.setText(init_symbol)
         self.model_lags_input.setText("3")
         self.update_interval_input.setText("1")
         self.model_lags_input.setValidator(val_int)
         self.update_interval_input.setValidator(val_int)
         
         controls_layout.addWidget(self.monitor_canvas)
+        interact_layout.addWidget(self.placeorder_btn)
+        interact_layout.addWidget(self.aggregate_btn)
         env_info_layout.addWidget(self.symbol_input)
         env_info_layout.addWidget(self.load_model_btn)
         env_info_layout.addWidget(self.model_lags_input)
@@ -49,15 +57,45 @@ class MonitorStockWindow(QWidget):
         runstop_layout.addWidget(self.run_btn)
         runstop_layout.addWidget(self.stop_btn)
         
+        controls_layout.addLayout(interact_layout)
         controls_layout.addLayout(env_info_layout)
         controls_layout.addLayout(runstop_layout)
         base_layout.addLayout(controls_layout)
         
+        self.placeorder_btn.clicked.connect(self.placeorder_btn_cliked)
+        self.aggregate_btn.clicked.connect(self.aggregate_btn_clicked)
         self.load_model_btn.clicked.connect(self.load_model_btn_clicked)
         self.run_btn.clicked.connect(self.run_btn_clicked)
         self.stop_btn.clicked.connect(self.stop_btn_clicked)
         
         self.setLayout(base_layout)
+    
+    def placeorder_btn_cliked(self):
+        symbol = self.symbol_input.text().strip()
+        window = PlaceOrderWindow()
+        window.initUI(symbol)
+        self.windows.append(window)
+        window.show()
+    
+    def aggregate_btn_clicked(self):
+        logs = logger.read_all_trades()
+        if logs == []:
+            QMessageBox.information(None, "Error", "There's no trades you did.")
+            return
+        
+        stock = self.symbol_input.text().strip()
+        logs = [item for item in logs if item.get("stock") == stock]
+        profit = 0
+        for item in logs:
+            action = item.get("action")
+            units = float(item.get('units'))
+            price = float(item.get("price"))
+            if action == "buy":
+                profit -= (units * price)
+            if action == "sell":
+                profit += ((units * price) * (1-float("0."+self.bakctest_fee_input.text())))
+                
+        QMessageBox.information(self, "Self-Trading Profit", f"Profit: {profit}")
     
     def load_model_btn_clicked(self):
         fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './', "Keras (*.keras)")[0]
