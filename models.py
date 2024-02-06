@@ -18,6 +18,7 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import mean_squared_error
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 from keras.layers import Dropout
+from environment import *
 
 def load(path):
     return load_model(path)
@@ -98,185 +99,67 @@ class LSTM_Sequential:
         values = values.reshape((len(values), -1))
         g = TimeseriesGenerator(values, values, length=self.lags, batch_size=batch_size)
         return load(self.save_path).predict(g)
-    
-def set_seeds(seed=100):
-    random.seed(seed)
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
 
-class observation_space:
-    def __init__(self, n):
-        self.shape = (n,)
-class action_space:
-    def __init__(self, n):
-        self.n = n
-    def sample(self):
-        return random.randint(0, self.n - 1)
-    
-class FinanceEnv:
-    def __init__(self, raw, symbol, features, window, lags, data_preparing_func, leverage=1, min_performance=0.85, min_accuracy=0.5, start=0, end=None):
-        self.symbol = symbol
-        self.features = features
-        self.n_features = len(features)
-        self.window = window
-        self.lags = lags
-        self.leverage = leverage
-        self.min_performance = min_performance
-        self.min_accuracy = min_accuracy
-        self.start = start
-        self.end = end
-        self.raw = raw
-        self.observation_space = observation_space(self.lags)
-        self.action_space = action_space(2)
-        self.prepare_data = data_preparing_func
-        self.data, self.data_ = self.prepare_data(self.raw, self.start, self.end, self.symbol, self.window)
-
-    def append_raw(self, data):
-        self.raw = pd.concat([self.raw, data])
-        self.data, self.data_ = self.prepare_data(self.raw, self.start, self.end, self.symbol, self.window)
-
-    def _get_state(self):
-        return self.data_[self.features].iloc[self.bar -
-                                              self.lags:self.bar]
-
-    def get_state(self, bar):
-        return self.data_[self.features].iloc[bar - self.lags:bar]
-
-    def seed(self, seed):
-        random.seed(seed)
-        np.random.seed(seed)
-
-    def reset(self):
-        self.treward = 0
-        self.accuracy = 0
-        self.performance = 1
-        self.bar = self.lags
-        state = self.data_[self.features].iloc[self.bar -
-                                               self.lags:self.bar]
-        return state.values
-
-    def step(self, action):
-        correct = action == self.data['d'].iloc[self.bar]
-        ret = self.data['r'].iloc[self.bar] * self.leverage
-        reward_1 = 1 if correct else 0
-        reward_2 = abs(ret) if correct else -abs(ret)
-        self.treward += reward_1
-        self.bar += 1
-        self.accuracy = self.treward / (self.bar - self.lags)
-        self.performance *= math.exp(reward_2)
-        if self.bar >= len(self.data):
-            done = True
-        elif reward_1 == 1:
-            done = False
-        elif (self.performance < self.min_performance and
-              self.bar > self.lags + 15):
-            done = True
-        elif (self.accuracy < self.min_accuracy and
-              self.bar > self.lags + 15):
-            done = True
-        else:
-            done = False
-        state = self._get_state()
-        info = {}
-        return state.values, reward_1 + reward_2 * 5, done, info
-
-class TradingBot:
-    def __init__(self, hidden_units, learning_rate, learn_env,
-                 valid_env, val=True):
-        self.learn_env = learn_env
-        self.valid_env = valid_env
-        self.val = val
-        self.epsilon = 1.0
-        self.epsilon_min = 0.1
-        self.epsilon_decay = 0.99
-        self.learning_rate = learning_rate
-        self.gamma = 0.5
-        self.batch_size = 128
+class SARSA:
+    def __init__(self, env, epsilon=1.0, epsilon_min=0.1, epsilon_decay=0.999, discount_factor=0.6):
+        self.env = env
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.discount_factor = discount_factor
         self.max_treward = 0
         self.averages = list()
-        self.trewards = []
+        self.total_rewards = []
         self.performances = list()
-        self.aperformances = list()
-        self.vperformances = list()
         self.memory = deque(maxlen=2000)
-        self.model = self._build_model(hidden_units, learning_rate)
+        self.model = self._build_model()
 
-    def _build_model(self, hu, lr):
+    def _build_model(self):
         model = Sequential()
-        model.add(Dense(hu, input_shape=(
-            self.learn_env.lags, self.learn_env.n_features),
-            activation='relu'))
-        model.add(Dropout(0.3, seed=100))
-        model.add(Dense(hu, activation='relu'))
-        model.add(Dropout(0.3, seed=100))
-        model.add(Dense(2, activation='linear'))
-        model.compile(
-            loss='mse',
-            optimizer=RMSprop(learning_rate=lr)
-        )
+        model.add(Dense(48, input_shape=(self.env.lags, self.env.n_features), activation='relu'))
+        model.add(Dropout(0.2, seed=100))
+        model.add(Dense(24, activation='relu'))
+        model.add(Dropout(0.2, seed=100))
+        model.add(Dense(self.env.action_space.n, activation='linear'))
+        model.compile(loss='mse',optimizer=RMSprop(learning_rate=0.001))
         return model
 
-    def act(self, state):
+    def get_action(self, state):
         if random.random() <= self.epsilon:
-            return self.learn_env.action_space.sample()
+            return self.env.action_space.sample()
         action = self.model.predict(state, verbose=0)[0, 0]
         return np.argmax(action)
 
-    def replay(self):
+    def fit(self):
         batch = random.sample(self.memory, self.batch_size)
         for state, action, reward, next_state, done in batch:
             if not done:
-                reward += self.gamma * np.amax(
-                    self.model.predict(next_state, verbose=0)[0, 0])
+                reward += self.discount_factor * np.amax(self.model.predict(next_state, verbose=0)[0, 0])
             target = self.model.predict(state, verbose=0)
             target[0, 0, action] = reward
             self.model.fit(state, target, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-    def learn(self, episodes):
+    def learn(self, episodes, batch_size):
+        self.batch_size = batch_size
         for e in range(1, episodes + 1):
-            state = self.learn_env.reset()
-            state = np.reshape(state, [1, self.learn_env.lags,
-                                       self.learn_env.n_features])
+            state = self.env.reset()
+            state = np.reshape(state, [1, self.env.lags,
+                                       self.env.n_features])
             for _ in range(10000):
-                action = self.act(state)
-                next_state, reward, done, info = self.learn_env.step(action)
-                next_state = np.reshape(next_state,
-                                        [1, self.learn_env.lags,
-                                         self.learn_env.n_features])
-                self.memory.append([state, action, reward,
-                                    next_state, done])
+                action = self.get_action(state)
+                next_state, reward, done, info = self.env.step(action)
+                next_state = np.reshape(next_state,[1, self.env.lags, self.env.n_features])
+                self.memory.append([state, action, reward, next_state, done])
                 state = next_state
                 if done:
                     treward = _ + 1
-                    self.trewards.append(treward)
-                    av = sum(self.trewards[-25:]) / 25
-                    perf = self.learn_env.performance
-                    self.averages.append(av)
+                    self.total_rewards.append(treward)
+                    perf = self.env.performance
                     self.performances.append(perf)
-                    self.aperformances.append(
-                        sum(self.performances[-25:]) / 25)
                     self.max_treward = max(self.max_treward, treward)
                     yield EpisodeData(e, treward, self.max_treward, perf)
                     break
-            if self.val:
-                yield self.validate(e, episodes)
             if len(self.memory) > self.batch_size:
-                self.replay()
-        print()
-
-    def validate(self, e, episodes):
-        state = self.valid_env.reset()
-        state = np.reshape(state, [1, self.valid_env.lags,
-                                   self.valid_env.n_features])
-        for _ in range(10000):
-            action = np.argmax(self.model.predict(state, verbose=0)[0, 0])
-            next_state, reward, done, info = self.valid_env.step(action)
-            state = np.reshape(next_state, [1, self.valid_env.lags,
-                                            self.valid_env.n_features])
-            if done:
-                treward = _ + 1
-                perf = self.valid_env.performance
-                self.vperformances.append(perf)
-                return EpisodeData(episode=e, epsilon=self.epsilon)
+                self.fit()

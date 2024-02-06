@@ -11,6 +11,6 @@ class LearningThread(QThread):
         self.episodes = episodes
 
     def run(self):
-        for d in self.agent.learn(self.episodes):
+        for d in self.agent.learn(self.episodes, 128):
             self.update_signal.emit(d)
         self.update_signal.emit(models.EpisodeData(episode=-1))
