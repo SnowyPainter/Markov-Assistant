@@ -31,6 +31,7 @@ class QTMonitorStockThread(QThread):
     def run(self):
         self.monitor = riskmanager.MonitorStock(self.env, self.model)
         for info in self.monitor.monitor():
-            self.monitor.env.append_raw(data.create_realtime_dataset(self.tickers))
+            if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
+                self.monitor.env.append_raw(data.create_realtime_dataset(self.tickers))
             self.msleep(int(self.interval_sec * 1000))
             self.signal.emit(info)

@@ -94,6 +94,9 @@ class StoplossEnv:
         self.data = historical_data
         self.purchased_price = purchased_price
 
+    def append_raw(self, data):
+        self.data = pd.concat([self.data, data])
+    
     def _get_state(self):
         return self.data[self.column].iloc[self.bar - self.lags:self.bar]
     

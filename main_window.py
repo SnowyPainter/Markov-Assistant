@@ -5,7 +5,9 @@ import pandas as pd
 import os, json
 from train_result_window import *
 from train_rlmodel_window import *
+from train_stoploss_model_window import *
 from monitor_stock_window import *
+from monitor_stoploss_window import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -133,6 +135,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_period_input = QLineEdit()
         self.backtest_realtime_monitor_btn = QPushButton("Monitor", self)
         
+        self.realtime_stoploss_monitor_btn = QPushButton("Stoploss", self)
+        self.train_new_stoploss_model_btn = QPushButton("Train New Stoploss Model", self)
+        
     def setDetails(self):
         self.backtest_simulate = True
         val_int = QIntValidator()
@@ -191,6 +196,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
         self.backtest_realtime_monitor_btn.clicked.connect(self.backtest_realtime_monitor_btn_clicked)
         
+        self.realtime_stoploss_monitor_btn.clicked.connect(self.realtime_stoploss_monitor_btn_clicked)
+        self.train_new_stoploss_model_btn.clicked.connect(self.train_new_stoploss_model_btn_clicked)
+        
     def addWidgets(self):
         self.setWindowTitle('Markov')
         self.resize(1600, 800)
@@ -230,12 +238,14 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_input_layout.addWidget(self.bakctest_fee_input)
         self.backtest_control_input_layout.addWidget(self.backtest_guarantee_checkbox)
         self.backtest_control_layout.addWidget(self.backtest_trade_status_label)
+        self.backtest_control_layout.addWidget(self.train_new_stoploss_model_btn)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_checkbox)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_day_before_label)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_day_before_input)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_label)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_input)
         self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_monitor_btn)
+        self.backtest_control_simulate_layout.addWidget(self.realtime_stoploss_monitor_btn)
         
         widget = QWidget()
         widget.setLayout(base_layout)
@@ -388,6 +398,16 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.windows.append(window)
         window.show()
     
+    def realtime_stoploss_monitor_btn_clicked(self):
+        window = MonitorStoplossWindow()
+        self.windows.append(window)
+        window.show()
+    
+    def train_new_stoploss_model_btn_clicked(self):
+        window = TrainStoplossModelWindow()
+        self.windows.append(window)
+        window.show()
+        
 if __name__ == '__main__':
    app = QApplication(sys.argv)
    app.setStyleSheet(open('./resources/style.qss', 'r').read())

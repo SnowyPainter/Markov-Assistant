@@ -237,4 +237,37 @@ class MonitorStock:
             self.bar += 1
             yield ti
             
+class MonitorStoploss:
+    def __init__(self, env, model):
+        self.env = env
+        self.model = model
+        self.stop = False
+    
+    def stop_monitor(self):
+        self.stop = True
+    
+    def monitor(self):
+        order = 0
+        i = 0
+        lags = self.env.lags
+        while not self.stop:
+            if i >= len(self.env.data) - lags - 1:
+                yield tradeinfo.wait_for_data()
+            elif order == 0 and i < len(self.env.data) - lags - 1:
+                order = np.argmax(self.model.predict(np.array([self.env.data.iloc[i:i+lags]]), verbose=0))
+                if order == 1:
+                    self.stop = True
+                    break
+                ti = tradeinfo.none()
+                ti.set_price(self.env.data.iloc[i])
+                yield ti
+                i += 1
+        if order == 1:
+            yield tradeinfo.sell(self.env.data.iloc[i+lags])
+        else:
+            ti = tradeinfo.none()
+            ti.set_price(self.env.data.iloc[i])
+            yield ti
+        #print(f"sold : {self.env.data.iloc[i+lags]}")
+            
         
