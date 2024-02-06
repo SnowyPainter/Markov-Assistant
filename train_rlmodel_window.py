@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-import models, resources.canvas as canvas, data, QTLearn
+import models, resources.canvas as canvas, data, QTLearn, environment
 
 class TrainRLModelWindow(QDialog):
     def __init__(self):
@@ -77,7 +77,7 @@ class TrainRLModelWindow(QDialog):
         features = [target, 'r', 's', 'm', 'v']
         
         df = data.create_dataset([symbol], start=data.today_before(days), end=data.today(), interval=interval)
-        learn_env = models.FinanceEnv(df, target, features, window=20, lags=lags, data_preparing_func=data.prepare_RSMV_data,
+        learn_env = environment.FinanceEnv(df, target, features, window=20, lags=lags, data_preparing_func=data.prepare_RSMV_data,
                         leverage=1, min_performance=0.9, min_accuracy=0.475)
         models.set_seeds(100)
         self.is_learning = True

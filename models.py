@@ -101,7 +101,7 @@ class LSTM_Sequential:
         return load(self.save_path).predict(g)
 
 class SARSA:
-    def __init__(self, env, epsilon=1.0, epsilon_min=0.1, epsilon_decay=0.999, discount_factor=0.6):
+    def __init__(self, env, epsilon=1.0, epsilon_min=0.1, epsilon_decay=0.999, discount_factor=0.8):
         self.env = env
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
@@ -163,3 +163,61 @@ class SARSA:
                     break
             if len(self.memory) > self.batch_size:
                 self.fit()
+
+def build_model(input_shape, output_size):
+    model = Sequential()
+    model.add(Dense(48, input_shape=input_shape, activation='relu'))
+    model.add(Dropout(0.2, seed=100))
+    model.add(Dense(24, activation='relu'))
+    model.add(Dropout(0.2, seed=100))
+    model.add(Dense(output_size, activation='linear'))
+    model.compile(loss='mse', optimizer=RMSprop(learning_rate=0.001))
+    return model
+
+class QLearningAgent:
+    def __init__(self, env, build_model, learning_rate=0.1, discount_factor=0.99, epsilon=0.7, epsilon_decay=0.999, epsilon_min=0.1):
+        self.env = env
+        self.step_size = learning_rate
+        self.discount_factor = discount_factor
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.model = build_model((self.env.lags, 1), self.env.action_space.n)
+
+    def get_action(self, state):
+        if random.random() <= self.epsilon:
+            return self.env.action_space.sample()
+        else:
+            q_table = self.model.predict(np.array([state]), verbose=0)[0,0]
+            return np.argmax(q_table)
+
+    def update_q_values(self, state, action, reward, next_state):
+        self.q_table = self.model.predict(np.array([state]), verbose=0)
+        next_q_table = self.model.predict(np.array([next_state]), verbose=0)
+        best_next_action = np.argmax(next_q_table)
+        td_target = reward + self.discount_factor * next_q_table.flatten()[best_next_action]
+        td_error = td_target - self.q_table.flatten()[action]
+        self.q_table[np.unravel_index(action, self.q_table.shape)] += self.step_size * td_error
+        self.model.fit(np.array([state]), self.q_table, verbose=0)
+    
+    def fit(self, batch_states, batch_q_tables):
+        for state, q_table in zip(batch_states, batch_q_tables):
+            self.model.fit(np.array(state), np.array(q_table), epochs=1, verbose=0)
+    
+    def learn(self, episodes, batch_size):
+        batch_states, batch_q_tables = [], []
+        for episode in range(episodes):
+            state = self.env.reset()
+            done = False
+            while not done:
+                action = self.get_action(state)
+                next_state, reward, done, _ = self.env.step(action)
+                self.update_q_values(state, action, reward, next_state)
+                batch_states.append([next_state])
+                batch_q_tables.append(self.model.predict(np.array([state]), verbose=0))
+                if len(batch_states) >= batch_size:
+                    self.fit(batch_states, batch_q_tables)
+                    batch_states, batch_q_tables = [], []
+                    if self.epsilon > self.epsilon_min:
+                        self.epsilon *= self.epsilon_decay
+            yield EpisodeData(episode+1, treward=self.env.total_reward, performance=self.env.performance)

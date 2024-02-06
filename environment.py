@@ -17,6 +17,7 @@ class action_space:
         self.n = n
     def sample(self):
         return random.randint(0, self.n - 1)
+
 class FinanceEnv:
     def __init__(self, raw, symbol, features, window, lags, data_preparing_func, leverage=1, min_performance=0.85, min_accuracy=0.5, start=0, end=None):
         self.symbol = symbol
@@ -83,3 +84,57 @@ class FinanceEnv:
         state = self._get_state()
         info = {}
         return state.values, reward_1 + reward_2 * 5, done, info
+    
+class StoplossEnv:
+    def __init__(self, purchased_price, historical_data, column_name, lags):
+        self.column = column_name
+        self.lags = lags
+        self.observation_space = observation_space(self.lags)
+        self.action_space = action_space(2)
+        self.data = historical_data
+        self.purchased_price = purchased_price
+
+    def _get_state(self):
+        return self.data[self.column].iloc[self.bar - self.lags:self.bar]
+    
+    def get_state(self, bar):
+        return self.data[self.column].iloc[bar - self.lags:bar]
+
+    def get_price(self, bar):
+        return self.data[self.column].iloc[bar]
+    
+    def seed(self, seed):
+        random.seed(seed)
+        np.random.seed(seed)
+
+    def reset(self):
+        self.total_reward = 0
+        self.performance = 0
+        self.bar = self.lags
+        self.prev_price = self.get_price(self.bar)
+        state = self.data[self.column].iloc[self.bar - self.lags:self.bar]
+        return state.values
+
+    def _calculate_profit(self, p1, p2):
+        if p1 > p2:
+            return (p2 - p1) / p1
+        else:
+            return (p1 - p2) / p1
+    
+    def step(self, action):
+        current_price = self.get_price(self.bar)
+        self.bar += 1
+        positive_reward = 1 if action == 0 and self.prev_price <= current_price else 0
+        penalty_reward = self._calculate_profit(current_price, self.purchased_price)
+        self.total_reward += positive_reward
+        self.performance += penalty_reward
+        
+        if self.bar >= len(self.data):
+            done = True
+        if action == 0: #hold
+            done = False
+        elif action == 1: #sell
+            done = True
+        self.prev_price = current_price
+        state = self._get_state()
+        return state.values, positive_reward + penalty_reward, done, {}

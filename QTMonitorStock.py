@@ -1,5 +1,5 @@
 import data
-import models
+import environment
 import riskmanager
 import tradeinfo
 import pandas as pd
@@ -16,7 +16,7 @@ class QTMonitorStockThread(QThread):
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
         
-        self.env = models.FinanceEnv(df, target, features=features,
+        self.env = environment.FinanceEnv(df, target, features=features,
                                 window=10,
                                 lags=model_lags, data_preparing_func=data.prepare_RSMV_data,
                                 leverage=1,
