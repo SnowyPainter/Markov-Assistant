@@ -1,9 +1,8 @@
 __pycache__
 models/*
 *.keras
+portfolio.json
 build
 dist
 main_window.spec
-options.json
-portfolio.json
 log

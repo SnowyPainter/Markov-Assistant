@@ -3,6 +3,7 @@ import data, models, QTBacktest, resources.canvas as canvas
 import handlers.window_handler as window_handler
 import pandas as pd
 import os, json
+import portfolio
 from train_result_window import *
 from train_rlmodel_window import *
 from monitor_stock_window import *
@@ -92,8 +93,8 @@ class MyApp(QMainWindow, window_handler.Handler):
     
     def createUI(self):
         self.portfolio_stock_add_label = QLabel("Add Stock:")
-        self.portfolio_stock_add_input = QLineEdit()
-        self.portfolio_add_stock_btn = QPushButton("Add")
+        self.portfolio_stock_add_input = QLineEdit(self)
+        self.portfolio_add_stock_btn = QPushButton("Add", self)
         self.portfolio_add_stock_btn.clicked.connect(self.add_stock_btn_clicked)
 
         self.portfolio_stock_list_label = QLabel("My Portfolio Stock List:")
@@ -101,6 +102,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_stock_list.addItems(self.portfolio.keys())
         
         self.portfolio_evaluate_title_label = QLabel("Portfolio Evaluate")
+        self.portfolio_evaluate_ratio_btn = QPushButton("Composition Ratio", self)
+        self.portfolio_evaluate_sharp_btn = QPushButton("Sharp Ratio", self)
         
         self.dnn_title_label = QLabel("Long-Term Stock Price Prediction", self)
         self.dnn_run_btn = QPushButton("Run", self)
@@ -185,6 +188,8 @@ class MyApp(QMainWindow, window_handler.Handler):
 
     def connectActions(self):
         self.portfolio_stock_list.itemClicked.connect(self.handle_click_stock_list)
+        self.portfolio_evaluate_ratio_btn.clicked.connect(self.get_composition_ratio)
+        self.portfolio_evaluate_sharp_btn.clicked.connect(self.get_sharp_ratio)
         self.dnn_run_btn.clicked.connect(self.dnn_run_btn_clicked)
         self.dnn_get_info_btn.clicked.connect(self.dnn_get_result_btn_clicked)
         self.lstm_run_btn.clicked.connect(self.lstm_run_btn_clicked)
@@ -196,7 +201,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
         self.backtest_realtime_monitor_btn.clicked.connect(self.backtest_realtime_monitor_btn_clicked)
         self.realtime_stoploss_monitor_btn.clicked.connect(self.realtime_stoploss_monitor_btn_clicked)
-        
+
     def addWidgets(self):
         self.setWindowTitle('Markov')
         self.resize(1600, 800)
@@ -212,6 +217,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list_label)
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list)
         self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_title_label)
+        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_ratio_btn)
+        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_sharp_btn)
         
         self.dnn_control_btns_layout.addWidget(self.dnn_run_btn)
         self.dnn_control_btns_layout.addWidget(self.dnn_get_info_btn)
@@ -254,18 +261,30 @@ class MyApp(QMainWindow, window_handler.Handler):
         widget = QWidget()
         widget.setLayout(base_layout)
         self.setCentralWidget(widget)
-    
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
     def load_portfolio(self):
         try:
             with open(self.portfolio_file, 'r') as file:
                 self.portfolio = json.load(file)
         except FileNotFoundError:
             self.portfolio = {}
-
     def save_portfolio(self):
         with open(self.portfolio_file, 'w') as file:
             json.dump(self.portfolio, file)
-
+        
+        self.load_portfolio()
+    
+    def _str_symbols(self, symbols):
+        return ", ".join(symbols)
+    def _get_symbols(self, text):
+        return list(map(lambda x: x.strip(), text.split(',')))
+    def _show_finished_training_message(self):
+        QMessageBox.information(self, "Training finished", "Check the result to click 'Get information' Button")
+    
     def add_stock_btn_clicked(self):
         stock_name = self.portfolio_stock_add_input.text().strip()
         df = data.create_dataset([stock_name], start=data.today_before(10), end=data.today(), interval='1d')
@@ -307,18 +326,10 @@ class MyApp(QMainWindow, window_handler.Handler):
             self.backtest_tp_input.setText(str(bt_info["tp"]))
             self.bakctest_fee_input.setText(str(bt_info["fee"]))
     
-    def center(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-    
-    def _str_symbols(self, symbols):
-        return ", ".join(symbols)
-    def _get_symbols(self, text):
-        return list(map(lambda x: x.strip(), text.split(',')))
-    def _show_finished_training_message(self):
-        QMessageBox.information(self, "Training finished", "Check the result to click 'Get information' Button")
+    def get_composition_ratio(self):
+        print("do")
+    def get_sharp_ratio(self):
+        print("do")
     
     def dnn_run_btn_clicked(self):
         lags = int(self.dnn_lags_input.text())
@@ -332,11 +343,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         df = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3)), end=data.today(), interval='1d')
         if self.handle_flaw_dataset(df) == -1:
             return
-        if(self.selected_stock != ""):
-            self.portfolio[self.selected_stock]["dnn"] = {}
-            self.portfolio[self.selected_stock]["dnn"]["lags"] = lags
-            self.portfolio[self.selected_stock]["dnn"]['symbols'] = symbols
-            self.save_portfolio()
         
         self.dnn_plot.clear_plot()
         X_train, X_test, y_train, y_test = data.dnn_prepare_dataset(df, lags, target+'_Price')
@@ -347,6 +353,16 @@ class MyApp(QMainWindow, window_handler.Handler):
         df = data.dnn_prepare_for_prediction_dataset(df, lags)
         self.dnn_train_result = models.TrainResult(history.history, dnn.predict(df))
         self.dnn_plot.plot_static_data(df.index, self.dnn_train_result.predictions, "Date", target)
+        if(self.selected_stock != ""):
+            self.portfolio[self.selected_stock]["dnn"] = {}
+            self.portfolio[self.selected_stock]["dnn"]["lags"] = lags
+            self.portfolio[self.selected_stock]["dnn"]['symbols'] = symbols
+            self.portfolio[self.selected_stock]["dnn"]['result'] = {
+                "date" : df.index[-1].strftime("%Y-%m-%d"),
+                "prediction" : float(self.dnn_train_result.predictions[-1][0])
+            }
+            self.save_portfolio()
+        
         self._show_finished_training_message()
         
     def dnn_get_result_btn_clicked(self):
@@ -366,11 +382,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         train = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3)), end=data.today(), interval='1d')
         if self.handle_flaw_dataset(train) == -1:
             return
-        if(self.selected_stock != ""):
-            self.portfolio[self.selected_stock]["lstm"] = {}
-            self.portfolio[self.selected_stock]["lstm"]["lags"] = lags
-            self.portfolio[self.selected_stock]["lstm"]['symbols'] = symbols
-            self.save_portfolio()
 
         self.lstm_plot.clear_plot()
         mo1_5m = data.create_dataset(symbols, start=data.today_before(data.days_to_months(1)), end=data.today(), interval='1d')
@@ -382,6 +393,16 @@ class MyApp(QMainWindow, window_handler.Handler):
         history = lstm.fit(train_values, 100, 10, './models/lstm.keras', skip_if_exist=False)
         self.lstm_train_result = models.TrainResult(history.history, lstm.predict(test_values))
         self.lstm_plot.plot_static_data(test.index[lags:], self.lstm_train_result.predictions)
+        
+        if(self.selected_stock != ""):
+            self.portfolio[self.selected_stock]["lstm"] = {}
+            self.portfolio[self.selected_stock]["lstm"]["lags"] = lags
+            self.portfolio[self.selected_stock]["lstm"]['symbols'] = symbols
+            self.portfolio[self.selected_stock]["lstm"]['result'] = {
+                "date" : test.index[-1].strftime("%Y-%m-%d %H:%M:%S"),
+                "prediction" : float(self.lstm_train_result.predictions[-1][0])
+            }
+            self.save_portfolio()
         self._show_finished_training_message()
     
     def lstm_get_result_btn_clicked(self):

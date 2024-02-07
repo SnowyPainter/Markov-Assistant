@@ -1,1 +1,1 @@
-{"msft": {}, "nvda": {"dnn": {"lags": 3, "symbols": ["nvda", "^vix", "tqqq", "xsd", "eurusd=x"]}, "backtest": {"amount": 87497.1144, "guarantee": false, "lags": 3, "sl": 0.025, "tsl": 0.0, "tp": 0.035, "fee": 0.0025}}}
+{"nvda": {"dnn": {"lags": 3, "symbols": ["nvda", "^vix", "tqqq", "xsd", "eurusd=x"], "result": {"date": "2024-02-06", "prediction": 640.3150634765625}}, "lstm": {"lags": 10, "symbols": ["nvda", "amd", "intc"], "result": {"date": "2024-02-06 00:00:00", "prediction": -0.09362498670816422}}}}
