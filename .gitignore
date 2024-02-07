@@ -5,4 +5,5 @@ build
 dist
 main_window.spec
 options.json
+portfolio.json
 log
