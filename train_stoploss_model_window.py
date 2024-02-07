@@ -6,7 +6,6 @@ import models, resources.canvas as canvas, data, QTLearn, environment
 class TrainStoplossModelWindow(QDialog):
     def __init__(self):
         super(TrainStoplossModelWindow, self).__init__(None)
-        self.resize(1024, 600)
         self.center()
         self.setWindowTitle("Training New Stop-Loss Model")
         self.initUI()
@@ -48,7 +47,7 @@ class TrainStoplossModelWindow(QDialog):
         self.learn_button.clicked.connect(self.learn_clicked)
         
         layout.addLayout(form_layout)
-        layout.addWidget(self.learn_button, alignment=Qt.AlignCenter)
+        layout.addWidget(self.learn_button)
         self.setLayout(layout)
         
     def center(self):

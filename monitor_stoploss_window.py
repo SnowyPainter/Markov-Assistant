@@ -5,17 +5,17 @@ import QTMonitorStock, QTMonitorStoploss
 from placeorder_window import *
 import datetime, os
 import models, resources.canvas as canvas, tradeinfo, logger
+from train_stoploss_model_window import *
 
 class MonitorStoplossWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Monitor Stop loss")
         self.resize(1024, 600)
-        self.initUI()
         self.windows = []
         self.stoploss_model_path = ""
         
     def initUI(self, init_symbol=""):
+        self.setWindowTitle("Monitor Stop loss")
         val_int = QIntValidator()
         base_layout = QVBoxLayout()
         self.monitor_canvas = canvas.RealTimePlot()
@@ -30,7 +30,8 @@ class MonitorStoplossWindow(QWidget):
         self.stoploss_btn = QPushButton("Stop Loss", self)
         self.stop_btn = QPushButton("Stop Monitoring", self)
         self.load_stoploss_model_btn = QPushButton("Load", self)
-
+        self.train_new_stoploss_model_btn = QPushButton("Train New Stoploss Model", self)
+        
         controls_layout = QVBoxLayout()
         interact_layout = QHBoxLayout()
         env_info_layout = QHBoxLayout()
@@ -42,6 +43,7 @@ class MonitorStoplossWindow(QWidget):
         self.update_interval_input.setText("1")
         self.model_lags_input.setValidator(val_int)
         self.update_interval_input.setValidator(val_int)
+        self.train_new_stoploss_model_btn.clicked.connect(self.train_new_stoploss_model_btn_clicked)
         
         controls_layout.addWidget(self.monitor_canvas)
         env_info_layout.addWidget(self.symbol_input)
@@ -51,7 +53,7 @@ class MonitorStoplossWindow(QWidget):
         bottom_layout.addWidget(self.purchased_price_input)
         bottom_layout.addWidget(self.stoploss_btn)
         bottom_layout.addWidget(self.stop_btn)
-        
+        bottom_layout.addWidget(self.train_new_stoploss_model_btn)
         controls_layout.addLayout(interact_layout)
         controls_layout.addLayout(env_info_layout)
         controls_layout.addLayout(bottom_layout)
@@ -90,3 +92,8 @@ class MonitorStoplossWindow(QWidget):
     def monitor_stoploss_thread_handler(self, info):
         if info.info_type == tradeinfo.TradeType.SELL:
             QMessageBox.information(self, "STOP LOSS", f"Stop loss for {info.price}")
+            
+    def train_new_stoploss_model_btn_clicked(self):
+        window = TrainStoplossModelWindow()
+        self.windows.append(window)
+        window.show()
