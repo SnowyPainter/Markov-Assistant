@@ -1,0 +1,1 @@
+{"msft": {}, "nvda": {"dnn": {"lags": 3, "symbols": ["nvda", "^vix", "tqqq", "xsd", "eurusd=x"]}, "backtest": {"amount": 87497.1144, "guarantee": false, "lags": 3, "sl": 0.025, "tsl": 0.0, "tp": 0.035, "fee": 0.0025}}}

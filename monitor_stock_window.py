@@ -11,7 +11,6 @@ class MonitorStockWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Monitor Stock")
         self.resize(1024, 600)
-        self.initUI()
         self.windows = []
         self.monitor_model_path = ""
         self.stoploss_model_path = ""

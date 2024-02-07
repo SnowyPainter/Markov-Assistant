@@ -15,11 +15,14 @@ class MyApp(QMainWindow, window_handler.Handler):
     def __init__(self):
         super().__init__()
         self.windows = []
-        self.addWidgets()
         self.dnn_train_result = None
+        self.selected_stock = ""
         self.lstm_train_result = None
         self.backtest_model_path = None
         self.backtesting = False
+        self.portfolio_file = "./portfolio.json"
+        self.load_portfolio()
+        self.addWidgets()
         self.loadOptions()
         self.loadRecentNetWealth()
     
@@ -51,6 +54,11 @@ class MyApp(QMainWindow, window_handler.Handler):
     
     def initLayouts(self):
         base_layout = QHBoxLayout()
+        self.portfolio_layout = QVBoxLayout()
+        self.portfolio_add_layout = QHBoxLayout()
+        self.portfolio_list_layout = QVBoxLayout()
+        self.portfolio_evaluate_layout = QVBoxLayout()
+        
         self.chart_layout = QVBoxLayout()
         self.lstm_layout = QVBoxLayout()
         self.lstm_panel_layout = QVBoxLayout()
@@ -72,6 +80,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_input_layout = QHBoxLayout()
         self.backtest_control_simulate_layout = QHBoxLayout()
         
+        self.portfolio_layout.addLayout(self.portfolio_add_layout)
+        self.portfolio_layout.addLayout(self.portfolio_list_layout)
+        self.portfolio_layout.addLayout(self.portfolio_evaluate_layout)
         self.lstm_layout.addLayout(self.lstm_panel_layout)
         self.lstm_layout.addLayout(self.lstm_control_layout)
         self.lstm_control_layout.addLayout(self.lstm_control_btns_layout)
@@ -91,12 +102,22 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_layout.addLayout(self.backtest_panel_layout)
         self.backtest_layout.addLayout(self.backtest_control_layout)
         
+        base_layout.addLayout(self.portfolio_layout)
         base_layout.addLayout(self.chart_layout)
         base_layout.addLayout(self.backtest_layout)
         
         return base_layout
     
     def createUI(self):
+        self.portfolio_stock_add_label = QLabel("Add Stock:")
+        self.portfolio_stock_add_input = QLineEdit()
+        self.portfolio_add_stock_btn = QPushButton("Add")
+        self.portfolio_add_stock_btn.clicked.connect(self.add_stock_btn_clicked)
+
+        self.portfolio_stock_list_label = QLabel("My Portfolio Stock List:")
+        self.portfolio_stock_list = QListWidget()
+        self.portfolio_stock_list.addItems(self.portfolio.keys())
+        
         self.dnn_title_label = QLabel("Long-Term Stock Price Prediction", self)
         self.dnn_run_btn = QPushButton("Run", self)
         self.dnn_get_info_btn = QPushButton("Get Information", self)
@@ -161,14 +182,10 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_option_lags_input.setValidator(val_int)
         self.backtest_option_lags_input.setPlaceholderText("Lags")
         self.backtest_option_lags_input.setText("3")
-        self.backtest_sl_input.setValidator(val_int)
-        self.backtest_tsl_input.setValidator(val_int)
-        self.backtest_tp_input.setValidator(val_int)
-        self.bakctest_fee_input.setValidator(val_int)
-        self.backtest_sl_input.setPlaceholderText("Stop-loss %")
-        self.backtest_tsl_input.setPlaceholderText("Trail Stop-loss %")
-        self.backtest_tp_input.setPlaceholderText("Take-profit %")
-        self.bakctest_fee_input.setPlaceholderText("Fee %")
+        self.backtest_sl_input.setPlaceholderText("Stop-loss % / 100")
+        self.backtest_tsl_input.setPlaceholderText("Trail Stop-loss % / 100")
+        self.backtest_tp_input.setPlaceholderText("Take-profit % / 100")
+        self.bakctest_fee_input.setPlaceholderText("Fee % / 100")
         self.backtest_sl_input.setText("015")
         self.backtest_tsl_input.setText("")
         self.backtest_tp_input.setText("045")
@@ -183,6 +200,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_period_input.setEnabled(self.backtest_simulate)
 
     def connectActions(self):
+        self.portfolio_stock_list.itemClicked.connect(self.handle_click_stock_list)
         self.dnn_run_btn.clicked.connect(self.dnn_run_btn_clicked)
         self.dnn_get_info_btn.clicked.connect(self.dnn_get_result_btn_clicked)
         self.lstm_run_btn.clicked.connect(self.lstm_run_btn_clicked)
@@ -193,7 +211,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_open_model_btn.clicked.connect(self.backtest_open_model_btn_clicked)
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
         self.backtest_realtime_monitor_btn.clicked.connect(self.backtest_realtime_monitor_btn_clicked)
-        
         self.realtime_stoploss_monitor_btn.clicked.connect(self.realtime_stoploss_monitor_btn_clicked)
         
     def addWidgets(self):
@@ -204,6 +221,12 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.createUI()
         self.setDetails()
         self.connectActions()
+        
+        self.portfolio_add_layout.addWidget(self.portfolio_stock_add_label)
+        self.portfolio_add_layout.addWidget(self.portfolio_stock_add_input)
+        self.portfolio_add_layout.addWidget(self.portfolio_add_stock_btn)
+        self.portfolio_list_layout.addWidget(self.portfolio_stock_list_label)
+        self.portfolio_list_layout.addWidget(self.portfolio_stock_list)
         
         self.dnn_control_btns_layout.addWidget(self.dnn_run_btn)
         self.dnn_control_btns_layout.addWidget(self.dnn_get_info_btn)
@@ -247,12 +270,66 @@ class MyApp(QMainWindow, window_handler.Handler):
         widget.setLayout(base_layout)
         self.setCentralWidget(widget)
     
+    def load_portfolio(self):
+        try:
+            with open(self.portfolio_file, 'r') as file:
+                self.portfolio = json.load(file)
+        except FileNotFoundError:
+            self.portfolio = {}
+
+    def save_portfolio(self):
+        with open(self.portfolio_file, 'w') as file:
+            json.dump(self.portfolio, file)
+
+    def add_stock_btn_clicked(self):
+        stock_name = self.portfolio_stock_add_input.text().strip()
+        df = data.create_dataset([stock_name], start=data.today_before(10), end=data.today(), interval='1d')
+        if self.handle_flaw_dataset(df) == -1:
+            self.portfolio_stock_add_input.setText("")
+            return
+        if stock_name:
+            if stock_name not in self.portfolio:
+                self.portfolio[stock_name] = {}
+                self.portfolio_stock_list.addItem(stock_name)
+                self.save_portfolio()
+            else:
+                QMessageBox.warning(self, "Warning", "Stock already exists!")
+        else:
+            QMessageBox.warning(self, "Warning", "Please enter a stock name!")
+
+    def handle_click_stock_list(self, item):
+        selected_stock = item.text()
+        self.selected_stock = selected_stock
+        
+        stock_info = self.portfolio[self.selected_stock]
+        if "dnn" in stock_info:
+            dnn_info = stock_info["dnn"]
+            self.dnn_lags_input.setText(str(dnn_info["lags"]))
+            self.dnn_stocks_input.setText(self._str_symbols(dnn_info["symbols"]))
+            self.dnn_target_stock_input.setText(selected_stock)
+        if "lstm" in self.portfolio[self.selected_stock]:
+            lstm_info = stock_info["lstm"]
+            self.lstm_lags_input.setText(str(lstm_info["lags"]))
+            self.lstm_stocks_input.setText(self._str_symbols(lstm_info["symbols"]))
+        if "backtest" in self.portfolio[self.selected_stock]:
+            bt_info = stock_info["backtest"]
+            self.backtest_option_lags_input.setText(str(bt_info["lags"]))
+            self.backtest_option_amount_input.setText(str(bt_info["amount"]))
+            self.backtest_option_symbol_input.setText(selected_stock)
+            self.backtest_guarantee_checkbox.setChecked(bt_info["guarantee"])
+            self.backtest_sl_input.setText(str(bt_info["sl"]))
+            self.backtest_tsl_input.setText(str(bt_info["tsl"]))
+            self.backtest_tp_input.setText(str(bt_info["tp"]))
+            self.bakctest_fee_input.setText(str(bt_info["fee"]))
+    
     def center(self):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
     
+    def _str_symbols(self, symbols):
+        return ", ".join(symbols)
     def _get_symbols(self, text):
         return list(map(lambda x: x.strip(), text.split(',')))
     def _show_finished_training_message(self):
@@ -270,6 +347,11 @@ class MyApp(QMainWindow, window_handler.Handler):
         df = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3)), end=data.today(), interval='1d')
         if self.handle_flaw_dataset(df) == -1:
             return
+        if(self.selected_stock != ""):
+            self.portfolio[self.selected_stock]["dnn"] = {}
+            self.portfolio[self.selected_stock]["dnn"]["lags"] = lags
+            self.portfolio[self.selected_stock]["dnn"]['symbols'] = symbols
+            self.save_portfolio()
         
         self.dnn_plot.clear_plot()
         X_train, X_test, y_train, y_test = data.dnn_prepare_dataset(df, lags, target+'_Price')
@@ -299,7 +381,12 @@ class MyApp(QMainWindow, window_handler.Handler):
         train = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3)), end=data.today(), interval='1d')
         if self.handle_flaw_dataset(train) == -1:
             return
-        
+        if(self.selected_stock != ""):
+            self.portfolio[self.selected_stock]["lstm"] = {}
+            self.portfolio[self.selected_stock]["lstm"]["lags"] = lags
+            self.portfolio[self.selected_stock]["lstm"]['symbols'] = symbols
+            self.save_portfolio()
+
         self.lstm_plot.clear_plot()
         mo1_5m = data.create_dataset(symbols, start=data.today_before(data.days_to_months(1)), end=data.today(), interval='1d')
         train_values = data.lstm_prepare_dataset(train).values
@@ -338,14 +425,25 @@ class MyApp(QMainWindow, window_handler.Handler):
         lags = int(self.backtest_option_lags_input.text())
         if lags < 1:
             lags = 1
-        sl = float("0."+self.backtest_sl_input.text())
+        sl = float(self.backtest_sl_input.text())
+        tsl = float(self.backtest_tsl_input.text())
+        tp = float(self.backtest_tp_input.text())
+        fee = float(self.bakctest_fee_input.text())
+        
+        if(self.selected_stock != ""):
+            self.portfolio[self.selected_stock]["backtest"] = {}
+            self.portfolio[self.selected_stock]["backtest"]["amount"] = amount
+            self.portfolio[self.selected_stock]["backtest"]['guarantee'] = guarantee
+            self.portfolio[self.selected_stock]["backtest"]['lags'] = lags
+            self.portfolio[self.selected_stock]["backtest"]['sl'] = sl
+            self.portfolio[self.selected_stock]["backtest"]['tsl'] = tsl
+            self.portfolio[self.selected_stock]["backtest"]['tp'] = tp
+            self.portfolio[self.selected_stock]["backtest"]['fee'] = fee
+            self.save_portfolio()
+        
         sl = None if sl == 0.0 else sl
-        tsl = float("0."+self.backtest_tsl_input.text())
         tsl = None if tsl == 0.0 else tsl
-        tp = float("0."+self.backtest_tp_input.text())
         tp = None if tp == 0.0 else tp
-        fee = float("0."+self.bakctest_fee_input.text())
-
         target = symbol + '_Price'
         symbols = [symbol]
         features = [target, 'r', 's', 'm', 'v']
@@ -391,12 +489,13 @@ class MyApp(QMainWindow, window_handler.Handler):
     
     def backtest_realtime_monitor_btn_clicked(self):
         window = MonitorStockWindow()
+        window.initUI(self.selected_stock)
         self.windows.append(window)
         window.show()
     
     def realtime_stoploss_monitor_btn_clicked(self):
         window = MonitorStoplossWindow()
-        window.initUI()
+        window.initUI(self.selected_stock)
         self.windows.append(window)
         window.show()
         
