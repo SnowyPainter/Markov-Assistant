@@ -118,6 +118,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_stock_list = QListWidget()
         self.portfolio_stock_list.addItems(self.portfolio.keys())
         
+        self.portfolio_evaluate_title_label = QLabel("Portfolio Evaluate")
+        
         self.dnn_title_label = QLabel("Long-Term Stock Price Prediction", self)
         self.dnn_run_btn = QPushButton("Run", self)
         self.dnn_get_info_btn = QPushButton("Get Information", self)
@@ -227,6 +229,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_add_layout.addWidget(self.portfolio_add_stock_btn)
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list_label)
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list)
+        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_title_label)
         
         self.dnn_control_btns_layout.addWidget(self.dnn_run_btn)
         self.dnn_control_btns_layout.addWidget(self.dnn_get_info_btn)

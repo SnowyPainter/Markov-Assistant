@@ -90,7 +90,12 @@ class MonitorStoplossWindow(QWidget):
         self.monitor_stoploss_thread.start()
         
     def monitor_stoploss_thread_handler(self, info):
-        if info.info_type == tradeinfo.TradeType.SELL:
+        date = info.date
+        price = info.price
+        if info.info_type != tradeinfo.InfoType.WAITFORNEWDATA:
+            self.monitor_canvas.update_plot(date, price)    
+        if info.trade_type == tradeinfo.TradeType.SELL:
+            self.monitor_canvas.canvas.add_text_at_value("Stop Loss", date, price, color="red")
             QMessageBox.information(self, "STOP LOSS", f"Stop loss for {info.price}")
             
     def train_new_stoploss_model_btn_clicked(self):
