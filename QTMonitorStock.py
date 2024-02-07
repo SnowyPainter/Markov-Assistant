@@ -16,12 +16,7 @@ class QTMonitorStockThread(QThread):
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
         
-        self.env = environment.FinanceEnv(df, target, features=features,
-                                window=10,
-                                lags=model_lags, data_preparing_func=data.prepare_RSMV_data,
-                                leverage=1,
-                                min_performance=0.0, min_accuracy=0.0,
-                                start=0, end=None)
+        self.env = environment.FinanceEnv(df, target, features=features, window=10, lags=model_lags, data_preparing_func=data.prepare_RSMV_data, min_performance=0.0, start=0, end=None)
         self.model = model
         self.interval_sec = interval_sec
     

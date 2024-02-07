@@ -23,7 +23,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_file = "./portfolio.json"
         self.load_portfolio()
         self.addWidgets()
-        self.loadOptions()
         self.loadRecentNetWealth()
     
     def loadRecentNetWealth(self):
@@ -34,24 +33,7 @@ class MyApp(QMainWindow, window_handler.Handler):
                 self.backtest_option_amount_input.setText(str(net_wealth))
         except:
             self.backtest_option_amount_input.setText("10000")
-        
-    def loadOptions(self):
-        if not os.path.exists('options.json'):
-            default_values = {
-                "trailing stop loss": "",
-                "stop loss": "015",
-                "take profit": "045",
-                "fee": "0025"
-            }
-            with open('options.json', 'w') as file:
-                json.dump(default_values, file, indent=2)
-        with open('options.json', 'r') as file:
-            data = json.load(file)
-            self.backtest_tsl_input.setText(data.get("trailing stop loss", ""))
-            self.backtest_sl_input.setText(data.get("stop loss", ""))
-            self.backtest_tp_input.setText(data.get("take profit", ""))
-            self.bakctest_fee_input.setText(data.get("fee", ""))
-    
+
     def initLayouts(self):
         base_layout = QHBoxLayout()
         self.portfolio_layout = QVBoxLayout()
@@ -188,10 +170,10 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_tsl_input.setPlaceholderText("Trail Stop-loss % / 100")
         self.backtest_tp_input.setPlaceholderText("Take-profit % / 100")
         self.bakctest_fee_input.setPlaceholderText("Fee % / 100")
-        self.backtest_sl_input.setText("015")
-        self.backtest_tsl_input.setText("")
-        self.backtest_tp_input.setText("045")
-        self.bakctest_fee_input.setText("0025")
+        self.backtest_sl_input.setText("0.015")
+        self.backtest_tsl_input.setText("0.0")
+        self.backtest_tp_input.setText("0.045")
+        self.bakctest_fee_input.setText("0.0025")
         self.backtest_guarantee_checkbox.setChecked(True)
         self.backtest_trade_status_label.setFont(QFont('Arial', 13))
         self.backtest_simulate_checkbox.setChecked(self.backtest_simulate)
