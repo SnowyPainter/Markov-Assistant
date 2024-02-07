@@ -77,7 +77,7 @@ class RiskManager():
         infos.append(info)
         return infos
 
-    def backtest_strategy(self, sl=None, tsl=None, tp=None, wait=5, guarantee=False):
+    def backtest_with_strategy(self, sl=None, tsl=None, tp=None, wait=10, guarantee=False):
         self.units = 0
         self.position = 0
         self.trades = 0

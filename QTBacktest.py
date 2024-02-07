@@ -26,7 +26,7 @@ class BacktestThread(QThread):
         self.guarantee = guarantee
     
     def run(self):
-        for infos in self.bt.backtest_strategy(sl=self.sl, tsl=self.tsl, tp=self.tp, wait=5, guarantee=self.guarantee):
+        for infos in self.bt.backtest_with_strategy(sl=self.sl, tsl=self.tsl, tp=self.tp, wait=5, guarantee=self.guarantee):
             if self.stopped:
                 break
             elif len(infos) == 1 and infos[0].info_type == tradeinfo.InfoType.WAITFORNEWDATA and self.bt.waiting:
