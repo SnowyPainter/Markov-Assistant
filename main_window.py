@@ -102,8 +102,10 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_stock_list.addItems(self.portfolio.keys())
         
         self.portfolio_evaluate_title_label = QLabel("Portfolio Evaluate")
-        self.portfolio_evaluate_ratio_btn = QPushButton("Composition Ratio", self)
-        self.portfolio_evaluate_sharp_btn = QPushButton("Sharp Ratio", self)
+        self.portfolio_evaluate_optimize_btn = QPushButton("Optimal Weights", self)
+        self.portfolio_evaluate_vol_btn = QPushButton("Volatility", self)
+        self.portfolio_evaluate_weights_label = QLabel("Weights")
+        self.portfolio_evaluate_vol_label = QLabel("Volatility")
         
         self.dnn_title_label = QLabel("Long-Term Stock Price Prediction", self)
         self.dnn_run_btn = QPushButton("Run", self)
@@ -188,8 +190,8 @@ class MyApp(QMainWindow, window_handler.Handler):
 
     def connectActions(self):
         self.portfolio_stock_list.itemClicked.connect(self.handle_click_stock_list)
-        self.portfolio_evaluate_ratio_btn.clicked.connect(self.get_composition_ratio)
-        self.portfolio_evaluate_sharp_btn.clicked.connect(self.get_sharp_ratio)
+        self.portfolio_evaluate_optimize_btn.clicked.connect(self.get_optimal_weights)
+        self.portfolio_evaluate_vol_btn.clicked.connect(self.get_portfolio_vol)
         self.dnn_run_btn.clicked.connect(self.dnn_run_btn_clicked)
         self.dnn_get_info_btn.clicked.connect(self.dnn_get_result_btn_clicked)
         self.lstm_run_btn.clicked.connect(self.lstm_run_btn_clicked)
@@ -217,8 +219,10 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list_label)
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list)
         self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_title_label)
-        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_ratio_btn)
-        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_sharp_btn)
+        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_optimize_btn)
+        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_weights_label)
+        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_vol_btn)
+        self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_vol_label)
         
         self.dnn_control_btns_layout.addWidget(self.dnn_run_btn)
         self.dnn_control_btns_layout.addWidget(self.dnn_get_info_btn)
@@ -326,11 +330,14 @@ class MyApp(QMainWindow, window_handler.Handler):
             self.backtest_tp_input.setText(str(bt_info["tp"]))
             self.bakctest_fee_input.setText(str(bt_info["fee"]))
     
-    def get_composition_ratio(self):
-        print("do")
-    def get_sharp_ratio(self):
-        print("do")
-    
+    def get_optimal_weights(self):
+        today, tomorrow = portfolio.get_today_tomorrow_prices(self.portfolio)
+        w = portfolio.optimal_portfolio_weights(today, tomorrow, risk_free_rate=0.3)
+        self.portfolio_evaluate_weights_label.setText("\n".join([f"{info[0]}: {(round(info[1]*100, 2))}%" for info in zip(portfolio.get_names(self.portfolio), w)]))
+    def get_portfolio_vol(self):
+        today, tomorrow = portfolio.get_today_tomorrow_prices(self.portfolio)
+        vol = portfolio.portfolio_volatility(portfolio.optimal_portfolio_weights(today, tomorrow, risk_free_rate=0.3), today, tomorrow)
+        self.portfolio_evaluate_vol_label.setText(str(round(vol, 2)))
     def dnn_run_btn_clicked(self):
         lags = int(self.dnn_lags_input.text())
         symbols = self._get_symbols(self.dnn_stocks_input.text())
