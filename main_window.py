@@ -332,10 +332,14 @@ class MyApp(QMainWindow, window_handler.Handler):
     
     def get_optimal_weights(self):
         today, tomorrow = portfolio.get_today_tomorrow_prices(self.portfolio)
+        if len(today) <= 0 or len(tomorrow) <= 0:
+            return
         w = portfolio.optimal_portfolio_weights(today, tomorrow, risk_free_rate=0.3)
         self.portfolio_evaluate_weights_label.setText("\n".join([f"{info[0]}: {(round(info[1]*100, 2))}%" for info in zip(portfolio.get_names(self.portfolio), w)]))
     def get_portfolio_vol(self):
         today, tomorrow = portfolio.get_today_tomorrow_prices(self.portfolio)
+        if len(today) <= 0 or len(tomorrow) <= 0:
+            return
         vol = portfolio.portfolio_volatility(portfolio.optimal_portfolio_weights(today, tomorrow, risk_free_rate=0.3), today, tomorrow)
         self.portfolio_evaluate_vol_label.setText(str(round(vol, 2)))
     def dnn_run_btn_clicked(self):
