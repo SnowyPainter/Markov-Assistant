@@ -26,6 +26,10 @@ class PlaceOrderWindow(QWidget):
         layout.addWidget(self.buy_button)
         layout.addWidget(self.sell_button)
         self.setLayout(layout)
+    
+    def set_price(self, price):
+        self.price_input.setText(str(price))
+    
     def on_buy_button_clicked(self):
         self.log_trade("buy")
 

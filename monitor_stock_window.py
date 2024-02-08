@@ -33,13 +33,9 @@ class MonitorStockWindow(QWidget):
         
         self.run_btn = QPushButton("Run", self)
         self.stop_btn = QPushButton("Stop", self)
-        self.purchased_price_input = QLineEdit(self)
-        self.stoploss_btn = QPushButton("Stop Loss", self)
-        self.load_stoploss_model_btn = QPushButton("Load", self)
-        
+
         self.run_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
-        self.stoploss_btn.setEnabled(False)
         
         controls_layout = QVBoxLayout()
         interact_layout = QHBoxLayout()
@@ -47,7 +43,6 @@ class MonitorStockWindow(QWidget):
         runstop_layout = QHBoxLayout()
         
         self.symbol_input.setText(init_symbol)
-        self.purchased_price_input.setPlaceholderText("Purchased Price")
         self.model_lags_input.setText("3")
         self.update_interval_input.setText("1")
         self.model_lags_input.setValidator(val_int)
@@ -62,9 +57,6 @@ class MonitorStockWindow(QWidget):
         env_info_layout.addWidget(self.update_interval_input)
         runstop_layout.addWidget(self.run_btn)
         runstop_layout.addWidget(self.stop_btn)
-        runstop_layout.addWidget(self.purchased_price_input)
-        runstop_layout.addWidget(self.stoploss_btn)
-        runstop_layout.addWidget(self.load_stoploss_model_btn)
         
         controls_layout.addLayout(interact_layout)
         controls_layout.addLayout(env_info_layout)
@@ -76,17 +68,15 @@ class MonitorStockWindow(QWidget):
         self.load_model_btn.clicked.connect(self.load_model_btn_clicked)
         self.run_btn.clicked.connect(self.run_btn_clicked)
         self.stop_btn.clicked.connect(self.stop_btn_clicked)
-        self.stoploss_btn.clicked.connect(self.stoploss_btn_clicked)
-        self.load_stoploss_model_btn.clicked.connect(self.load_stoploss_model_btn_clicked)
         
         self.setLayout(base_layout)
     
     def placeorder_btn_cliked(self):
         symbol = self.symbol_input.text().strip()
-        window = PlaceOrderWindow()
-        window.initUI(symbol)
-        self.windows.append(window)
-        window.show()
+        self.placeorder_window = PlaceOrderWindow()
+        self.placeorder_window.initUI(symbol)
+        self.windows.append(self.placeorder_window)
+        self.placeorder_window.show()
     
     def aggregate_btn_clicked(self):
         logs = logger.read_all_trades()
@@ -129,7 +119,6 @@ class MonitorStockWindow(QWidget):
             return
         self.run_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
-        self.stoploss_btn.setEnabled(True)
         
         self.montior_thread = QTMonitorStock.QTMonitorStockThread(symbol, models.load(self.monitor_model_path), lags, interval)
         self.montior_thread.signal.connect(self.monitor_thread_result_handler)
@@ -138,7 +127,6 @@ class MonitorStockWindow(QWidget):
     def stop_btn_clicked(self):
         self.run_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
-        self.stoploss_btn.setEnabled(False)
         self.montior_thread.stop()
         
     def monitor_thread_result_handler(self, info):
@@ -147,6 +135,7 @@ class MonitorStockWindow(QWidget):
         trade_type = info.trade_type
         date = info.date
         price = info.price
+        self.placeorder_window.set_price(price)
         self.monitor_canvas.update_plot(date, price)
         if trade_type != tradeinfo.TradeType.NONE:
             logger.log_monitor(date.strftime("%Y-%m-%d %H:%M:%S"), price, trade_type)
@@ -154,30 +143,3 @@ class MonitorStockWindow(QWidget):
                 self.monitor_canvas.canvas.add_text_at_value("Buy", date, price, color="green")    
             elif trade_type == tradeinfo.TradeType.SELL:
                 self.monitor_canvas.canvas.add_text_at_value("Sell", date, price, color="red")
-    
-    def load_stoploss_model_btn_clicked(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './', "Keras (*.keras)")[0]
-        if fname == '':
-            return
-        self.stoploss_model_path = fname
-    
-    def stoploss_btn_clicked(self):
-        if self.run_btn.isEnabled():
-            QMessageBox.information(self, "Error", "Before using it, run monitoring.")
-            return
-        if not os.path.exists(self.stoploss_model_path):
-            QMessageBox.information(self, "Error", "Select your agent for stop-loss please.")
-            return
-        price = float(self.purchased_price_input.text().strip())
-        symbol = self.symbol_input.text().strip()
-        if price == 0 or symbol == "":
-            QMessageBox.information(self, "Error", "Weired inputs.")
-            return
-        
-        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, price, symbol,3)
-        self.monitor_stoploss_thread.signal.connect(self.monitor_stoploss_thread_handler)
-        self.monitor_stoploss_thread.start()
-        
-    def monitor_stoploss_thread_handler(self, info):
-        if info.info_type == tradeinfo.TradeType.SELL:
-            print(info.price)
