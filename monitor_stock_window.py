@@ -12,16 +12,19 @@ class MonitorStockWindow(QWidget):
         self.setWindowTitle("Monitor Stock")
         self.resize(1024, 600)
         self.windows = []
+        self.placeorder_window = None
         self.monitor_model_path = ""
         self.stoploss_model_path = ""
         
     def initUI(self, init_symbol=""):
         val_int = QIntValidator()
-        base_layout = QVBoxLayout()
+        base_layout = QHBoxLayout()
         self.monitor_canvas = canvas.RealTimePlot()
         self.monitor_canvas.canvas.set_major_formatter("%H:%M:%S")
         self.monitor_canvas.canvas.destroy_prev = False
         self.monitor_canvas.canvas.set_title("Realtime Monitoring")
+        
+        self.prev_price_list = QListWidget()
         
         self.symbol_input = QLineEdit(self)
         self.load_model_btn = QPushButton("Load Model", self)
@@ -62,7 +65,9 @@ class MonitorStockWindow(QWidget):
         controls_layout.addLayout(env_info_layout)
         controls_layout.addLayout(runstop_layout)
         base_layout.addLayout(controls_layout)
+        base_layout.addWidget(self.prev_price_list)
         
+        self.prev_price_list.itemClicked.connect(self.prev_price_list_item_clicked)
         self.placeorder_btn.clicked.connect(self.placeorder_btn_cliked)
         self.aggregate_btn.clicked.connect(self.aggregate_btn_clicked)
         self.load_model_btn.clicked.connect(self.load_model_btn_clicked)
@@ -70,6 +75,12 @@ class MonitorStockWindow(QWidget):
         self.stop_btn.clicked.connect(self.stop_btn_clicked)
         
         self.setLayout(base_layout)
+    
+    def prev_price_list_item_clicked(self, item):
+        if self.placeorder_window != None and self.placeorder_window.closed != True:
+            text = item.text()
+            price = float(text.split(" : ")[1])
+            self.placeorder_window.set_price(price)
     
     def placeorder_btn_cliked(self):
         symbol = self.symbol_input.text().strip()
@@ -135,7 +146,7 @@ class MonitorStockWindow(QWidget):
         trade_type = info.trade_type
         date = info.date
         price = info.price
-        self.placeorder_window.set_price(price)
+        self.prev_price_list.addItem(f"{date.strftime('%Y-%m-%d %H:%M:%S')} : {price}")
         self.monitor_canvas.update_plot(date, price)
         if trade_type != tradeinfo.TradeType.NONE:
             logger.log_monitor(date.strftime("%Y-%m-%d %H:%M:%S"), price, trade_type)

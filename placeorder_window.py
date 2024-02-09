@@ -1,3 +1,4 @@
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -9,6 +10,7 @@ class PlaceOrderWindow(QWidget):
         super().__init__()
     def initUI(self, stock):
         self.setWindowTitle("Place Order Window")
+        self.closed = False
         self.stock = stock
         layout = QVBoxLayout()
         self.quantity_label = QLabel("Units:")
@@ -40,3 +42,7 @@ class PlaceOrderWindow(QWidget):
         units = self.quantity_input.text()
         price = self.price_input.text()
         logger.log_trade(self.stock, action, units, price)
+    
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.closed = True
+        a0.accept()

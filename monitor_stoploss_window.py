@@ -15,13 +15,15 @@ class MonitorStoplossWindow(QWidget):
         self.stoploss_model_path = ""
         
     def initUI(self, init_symbol=""):
-        self.setWindowTitle("Monitor Stop loss")
+        self.setWindowTitle("Monitor Stoploss")
         val_int = QIntValidator()
-        base_layout = QVBoxLayout()
+        base_layout = QHBoxLayout()
+        self.prev_price_list = QListWidget()
+        
         self.monitor_canvas = canvas.RealTimePlot()
         self.monitor_canvas.canvas.set_major_formatter("%H:%M:%S")
         self.monitor_canvas.canvas.destroy_prev = False
-        self.monitor_canvas.canvas.set_title("Realtime Monitoring")
+        self.monitor_canvas.canvas.set_title("Stoploss Monitoring")
         
         self.symbol_input = QLineEdit(self)
         self.model_lags_input = QLineEdit(self)
@@ -58,7 +60,7 @@ class MonitorStoplossWindow(QWidget):
         controls_layout.addLayout(env_info_layout)
         controls_layout.addLayout(bottom_layout)
         base_layout.addLayout(controls_layout)
-        
+        base_layout.addWidget(self.prev_price_list)
         self.stoploss_btn.clicked.connect(self.stoploss_btn_clicked)
         self.stop_btn.clicked.connect(self.stop_btn_clicked)
         self.load_stoploss_model_btn.clicked.connect(self.load_stoploss_model_btn_clicked)
@@ -93,10 +95,11 @@ class MonitorStoplossWindow(QWidget):
         date = info.date
         price = info.price
         if info.info_type != tradeinfo.InfoType.WAITFORNEWDATA:
+            self.prev_price_list.addItem(f"{date.strftime('%Y-%m-%d %H:%M:%S')} : {price.iloc[0]}")
             self.monitor_canvas.update_plot(date, price)    
         if info.trade_type == tradeinfo.TradeType.SELL:
             self.monitor_canvas.canvas.add_text_at_value("Stop Loss", date, price, color="red")
-            QMessageBox.information(self, "STOP LOSS", f"Stop loss for {info.price}")
+            QMessageBox.information(self, "STOP LOSS", f"Stop loss for {price.iloc[0]}")
             
     def train_new_stoploss_model_btn_clicked(self):
         window = TrainStoplossModelWindow()
