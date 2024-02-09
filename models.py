@@ -10,6 +10,8 @@ from pylab import plt, mpl
 from tensorflow import keras
 from tensorflow.keras.optimizers import RMSprop
 from sklearn.metrics import accuracy_score
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.models import Model
 from tensorflow.keras.models import load_model
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
@@ -141,7 +143,7 @@ class SARSA:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-    def learn(self, episodes, batch_size):
+    def learn(self, episodes, batch_size=64):
         self.batch_size = batch_size
         for e in range(1, episodes + 1):
             state = self.env.reset()
@@ -204,7 +206,7 @@ class QLearningAgent:
         for state, q_table in zip(batch_states, batch_q_tables):
             self.model.fit(np.array(state), np.array(q_table), epochs=1, verbose=0)
     
-    def learn(self, episodes, batch_size):
+    def learn(self, episodes, batch_size=64):
         batch_states, batch_q_tables = [], []
         for episode in range(episodes):
             state = self.env.reset()

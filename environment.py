@@ -9,6 +9,9 @@ def set_seeds(seed=100):
     np.random.seed(seed)
     tf.random.set_seed(seed)
 
+class observation_space:
+    def __init__(self, n):
+        self.shape = (n,)
 class action_space:
     def __init__(self, n):
         self.n = n
@@ -72,6 +75,7 @@ class StoplossEnv:
     def __init__(self, purchased_price, historical_data, column_name, lags):
         self.column = column_name
         self.lags = lags
+        self.observation_space = observation_space(self.lags)
         self.action_space = action_space(2)
         self.data = historical_data
         self.purchased_price = purchased_price

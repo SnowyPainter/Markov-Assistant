@@ -3,6 +3,14 @@ import numpy as np
 import yfinance as yf
 import pytz
 from datetime import datetime, timedelta, time
+import os
+
+def a2c_filename(fname):
+    dirname, filename = os.path.split(fname)
+    name, ext = os.path.splitext(filename)
+    actor_path = os.path.join(dirname, f'{name}_actor.keras')
+    critic_path = os.path.join(dirname, f'{name}_critic.keras')
+    return actor_path, critic_path
 
 def days_to_years(years):
     return 365.25 * years

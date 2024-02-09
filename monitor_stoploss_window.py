@@ -82,12 +82,13 @@ class MonitorStoplossWindow(QWidget):
             return
         price = float(self.purchased_price_input.text().strip())
         symbol = self.symbol_input.text().strip()
+        lags = int(self.model_lags_input.text())
         wait_interval = int(self.update_interval_input.text().strip())
         if price == 0 or symbol == "":
             QMessageBox.information(self, "Error", "Weired inputs.")
             return
         
-        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, price, symbol, 3, wait_interval)
+        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, price, symbol, lags, wait_interval)
         self.monitor_stoploss_thread.signal.connect(self.monitor_stoploss_thread_handler)
         self.monitor_stoploss_thread.start()
         

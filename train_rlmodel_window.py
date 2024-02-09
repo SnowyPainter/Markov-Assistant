@@ -68,6 +68,7 @@ class TrainRLModelWindow(QDialog):
         self.fname = QFileDialog.getSaveFileName(self, '.Keras save file', "./my_model.keras", "Keras (*.keras)")[0]
         if self.fname == "":
             return
+        
         lags = int(self.lags_input.text())
         episodes = int(self.episodes_input.text())
         symbol = self.symbol_input.text().strip()
@@ -77,8 +78,7 @@ class TrainRLModelWindow(QDialog):
         features = [target, 'r', 's', 'm', 'v']
         
         df = data.create_dataset([symbol], start=data.today_before(days), end=data.today(), interval=interval)
-        learn_env = environment.FinanceEnv(df, target, features, window=20, lags=lags, data_preparing_func=data.prepare_RSMV_data,
-                        leverage=1, min_performance=0.9, min_accuracy=0.475)
+        learn_env = environment.FinanceEnv(df, target, features, window=20, lags=lags, data_preparing_func=data.prepare_RSMV_data, min_performance=0.9)
         models.set_seeds(100)
         self.is_learning = True
         self.agent = models.SARSA(learn_env)
