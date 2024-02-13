@@ -98,7 +98,8 @@ class StoplossEnv:
 
     def reset(self):
         self.total_reward = 0
-        self.performance = 0
+        self.performance = 1
+        self.holding = 0
         self.bar = self.lags
         self.prev_profit = []
         self.prev_price = self.get_price(self.bar)
@@ -117,12 +118,13 @@ class StoplossEnv:
         positive_reward = 1 if action == 0 and self.prev_price <= current_price else 0
         profit = self._calculate_profit(current_price, self.purchased_price)
         penalty_reward = np.exp(profit) if profit >= 0 else -np.exp(profit)
+
         self.prev_profit.append(profit)
         if action == 1 and profit < min(self.prev_profit):
             penalty_reward *= 2
         
         self.total_reward += positive_reward
-        self.performance += penalty_reward
+        self.performance *= math.exp(penalty_reward)
         
         if self.bar >= len(self.data) - 1:
             done = True
@@ -132,4 +134,5 @@ class StoplossEnv:
             done = True
         self.prev_price = current_price
         state = self._get_state()
+        self.holding += 1
         return state.values, positive_reward + penalty_reward, done, {}

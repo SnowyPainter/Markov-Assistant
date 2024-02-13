@@ -105,7 +105,7 @@ class MonitorStockWindow(QWidget):
             if action == "buy":
                 profit -= (units * price)
             if action == "sell":
-                profit += ((units * price) * (1-float("0."+self.bakctest_fee_input.text())))
+                profit += ((units * price) * (1-0.0025))
                 
         QMessageBox.information(self, "Self-Trading Profit", f"Profit: {profit}")
     
