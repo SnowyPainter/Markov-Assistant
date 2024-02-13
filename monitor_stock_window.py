@@ -146,11 +146,15 @@ class MonitorStockWindow(QWidget):
         trade_type = info.trade_type
         date = info.date
         price = info.price
-        self.prev_price_list.addItem(f"{date.strftime('%Y-%m-%d %H:%M:%S')} : {price}")
         self.monitor_canvas.update_plot(date, price)
+        t = ""
         if trade_type != tradeinfo.TradeType.NONE:
             logger.log_monitor(date.strftime("%Y-%m-%d %H:%M:%S"), price, trade_type)
             if trade_type == tradeinfo.TradeType.BUY:
+                t = "Buy"
                 self.monitor_canvas.canvas.add_text_at_value("Buy", date, price, color="green")    
             elif trade_type == tradeinfo.TradeType.SELL:
+                t = "Sell"
                 self.monitor_canvas.canvas.add_text_at_value("Sell", date, price, color="red")
+        
+        self.prev_price_list.addItem(f"{t}{date.strftime('%Y-%m-%d %H:%M:%S')} : {price}")
