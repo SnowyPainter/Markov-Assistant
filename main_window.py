@@ -485,6 +485,7 @@ class MyApp(QMainWindow, window_handler.Handler):
     
     def backtest_new_model_btn_clicked(self):
         sub = TrainRLModelWindow()
+        sub.initUI(self.selected_stock)
         sub.exec_()
         
     def backtest_open_model_btn_clicked(self):

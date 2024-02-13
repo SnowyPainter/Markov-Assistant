@@ -9,13 +9,12 @@ class TrainRLModelWindow(QDialog):
         self.resize(1024, 600)
         self.center()
         self.setWindowTitle("Training New RL Model for Backtesting")
-        self.initUI()
         self.is_learning = False
-    def initUI(self):
+    def initUI(self, symbol="nvda"):
         layout = QVBoxLayout()
         val_int = QIntValidator()
         self.symbol_input = QLineEdit(self)
-        self.symbol_input.setText("nvda")
+        self.symbol_input.setText(symbol)
         self.lags_input = QLineEdit(self)
         self.lags_input.setText("3")
         self.episodes_input = QLineEdit(self)
