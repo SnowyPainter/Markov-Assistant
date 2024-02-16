@@ -28,7 +28,6 @@ class MonitorStoplossWindow(QWidget):
         self.symbol_input = QLineEdit(self)
         self.model_lags_input = QLineEdit(self)
         self.update_interval_input = QLineEdit(self)
-        self.purchased_price_input = QLineEdit(self)
         self.stoploss_btn = QPushButton("Stop Loss", self)
         self.stop_btn = QPushButton("Stop Monitoring", self)
         self.load_stoploss_model_btn = QPushButton("Load", self)
@@ -40,7 +39,6 @@ class MonitorStoplossWindow(QWidget):
         bottom_layout = QHBoxLayout()
         
         self.symbol_input.setText(init_symbol)
-        self.purchased_price_input.setPlaceholderText("Purchased Price")
         self.model_lags_input.setText("3")
         self.update_interval_input.setText("1")
         self.model_lags_input.setValidator(val_int)
@@ -54,7 +52,6 @@ class MonitorStoplossWindow(QWidget):
         env_info_layout.addWidget(self.load_stoploss_model_btn)
         env_info_layout.addWidget(self.model_lags_input)
         env_info_layout.addWidget(self.update_interval_input)
-        bottom_layout.addWidget(self.purchased_price_input)
         bottom_layout.addWidget(self.stoploss_btn)
         bottom_layout.addWidget(self.stop_btn)
         bottom_layout.addWidget(self.train_new_stoploss_model_btn)
@@ -84,16 +81,15 @@ class MonitorStoplossWindow(QWidget):
         if not os.path.exists(self.stoploss_model_path):
             QMessageBox.information(self, "Error", "Select your agent for stop-loss please.")
             return
-        price = float(self.purchased_price_input.text().strip())
         symbol = self.symbol_input.text().strip()
         lags = int(self.model_lags_input.text())
         wait_interval = int(self.update_interval_input.text().strip())
-        if price == 0 or symbol == "":
+        if symbol == "":
             QMessageBox.information(self, "Error", "Weired inputs.")
             return
         self.stoploss_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
-        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, price, symbol, lags, wait_interval)
+        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, symbol, lags, wait_interval)
         self.monitor_stoploss_thread.signal.connect(self.monitor_stoploss_thread_handler)
         self.monitor_stoploss_thread.start()
         
@@ -109,5 +105,6 @@ class MonitorStoplossWindow(QWidget):
             
     def train_new_stoploss_model_btn_clicked(self):
         window = TrainStoplossModelWindow()
+        window.initUI(self.symbol_input.text().strip())
         self.windows.append(window)
         window.show()

@@ -72,17 +72,17 @@ class FinanceEnv:
         return state.values, pos_reward + penalty_reward * 5, done, info
     
 class StoplossEnv:
-    def __init__(self, purchased_price, historical_data, column_name, lags):
+    def __init__(self, historical_data, column_name, lags, stoploss=-0.02):
         self.column = column_name
         self.lags = lags
         self.observation_space = observation_space(self.lags)
         self.action_space = action_space(2)
         self.data = historical_data
-        self.purchased_price = purchased_price
+        self.stoploss = stoploss
 
     def append_raw(self, data):
         self.data = pd.concat([self.data, data])
-    
+        
     def _get_state(self):
         return self.data[self.column].iloc[self.bar - self.lags:self.bar]
     
@@ -98,10 +98,7 @@ class StoplossEnv:
 
     def reset(self):
         self.total_reward = 0
-        self.performance = 1
-        self.holding = 0
         self.bar = self.lags
-        self.prev_profit = []
         self.prev_price = self.get_price(self.bar)
         state = self.data[self.column].iloc[self.bar - self.lags:self.bar]
         return state.values
@@ -110,25 +107,24 @@ class StoplossEnv:
         if p1 > p2:
             return (p2 - p1) / p1
         else:
-            return (p1 - p2) / p1
+            return (p1 - p2) / p2
     
     def step(self, action):
         current_price = self.get_price(self.bar)
         self.bar += 1
-        positive_reward = 1 if action == 0 and self.prev_price <= current_price else 0
-        profit = self._calculate_profit(current_price, self.purchased_price)
-        penalty_reward = np.exp(profit) if profit >= 0 else -np.exp(profit)
+        reward = 1 if action == 0 and self.prev_price <= current_price else 0
+        profit = self._calculate_profit(current_price, self.prev_price)
 
-        self.total_reward += positive_reward
-        self.performance *= math.exp(penalty_reward)
-        
-        if self.bar >= len(self.data) - 1:
+        if self.bar >= len(self.data):
             done = True
-        if action == 0: #hold
+        elif action == 1 and profit >= self.stoploss:
+            reward += 1    
+            done = True
+        else:
+            reward -= 1
             done = False
-        elif action == 1: #sell
-            done = True
+            
+        self.total_reward += reward        
         self.prev_price = current_price
         state = self._get_state()
-        self.holding += 1
-        return state.values, positive_reward + penalty_reward * 5, done, {}
+        return state.values, reward, done, {}
