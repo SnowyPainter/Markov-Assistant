@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-import QTMonitorStock, QTMonitorStoploss
+import QTMonitorStock
 from placeorder_window import *
-import datetime, os
+import os
 import models, resources.canvas as canvas, tradeinfo, logger
 
 class MonitorStockWindow(QWidget):

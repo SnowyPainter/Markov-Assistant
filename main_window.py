@@ -5,6 +5,7 @@ import pandas as pd
 import os, json
 import portfolio
 from train_result_window import *
+from trade_window import *
 from train_rlmodel_window import *
 from monitor_stock_window import *
 from monitor_stoploss_window import *
@@ -92,6 +93,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         return base_layout
     
     def createUI(self):
+        self.portfolio_trade_btn = QPushButton("Trade", self)
+        
         self.portfolio_stock_add_label = QLabel("Add Stock:")
         self.portfolio_stock_add_input = QLineEdit(self)
         self.portfolio_add_stock_btn = QPushButton("Add", self)
@@ -190,6 +193,7 @@ class MyApp(QMainWindow, window_handler.Handler):
 
     def connectActions(self):
         self.portfolio_stock_list.itemClicked.connect(self.handle_click_stock_list)
+        self.portfolio_trade_btn.clicked.connect(self.trade_btn_clicked)
         self.portfolio_evaluate_optimize_btn.clicked.connect(self.get_optimal_weights)
         self.portfolio_evaluate_vol_btn.clicked.connect(self.get_portfolio_vol)
         self.dnn_run_btn.clicked.connect(self.dnn_run_btn_clicked)
@@ -218,6 +222,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.portfolio_add_layout.addWidget(self.portfolio_add_stock_btn)
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list_label)
         self.portfolio_list_layout.addWidget(self.portfolio_stock_list)
+        self.portfolio_list_layout.addWidget(self.portfolio_trade_btn)
         self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_title_label)
         self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_optimize_btn)
         self.portfolio_evaluate_layout.addWidget(self.portfolio_evaluate_weights_label)
@@ -330,6 +335,16 @@ class MyApp(QMainWindow, window_handler.Handler):
             self.backtest_tp_input.setText(str(bt_info["tp"]))
             self.bakctest_fee_input.setText(str(bt_info["fee"]))
     
+    def trade_btn_clicked(self):
+        if(self.selected_stock == ""):
+            QMessageBox.information(self, "Error", "Please select stock to trade.")
+            return
+        
+        window = TradeWindow()
+        window.initUI(self.selected_stock)
+        self.windows.append(window)
+        window.showMaximized()
+        
     def get_optimal_weights(self):
         today, tomorrow = portfolio.get_today_tomorrow_prices(self.portfolio)
         if len(today) <= 0 or len(tomorrow) <= 0:

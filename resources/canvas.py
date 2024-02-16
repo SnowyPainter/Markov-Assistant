@@ -84,12 +84,15 @@ class PlotCanvas(FigureCanvas):
         self.draw()
         
     def add_text_at_value(self, text, x, y=0, color="black"):
-        self.axes.annotate(text, xy=(x, y), xytext=(x, y-4),ha='center', va='top', arrowprops=dict(facecolor=color, shrink=0.05))
-
+        self.axes.annotate(text, xy=(x, y), xytext=(x, y-3),ha='center', va='top', arrowprops=dict(facecolor=color, shrink=0.05))
+    
+    def add_axhline_at_value(self, y, color="b", linestyle='--'):
+        self.axes.axhline(y=y, color=color, linestyle=linestyle)
+    
     def clear(self):
         self.axes.clear()
         self.x_data = []
         self.y_data = []
-        self.line, = self.axes.plot(self.x_data, self.y_data, marker='o')
+        self.line, = self.axes.plot(self.x_data, self.y_data, '-')
         self.draw()
         
