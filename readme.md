@@ -22,6 +22,9 @@ You can make your own RL model for backtesting right here.
 ![TrainStoplossModelWindow](./readme_resources/new_stoploss_model_window.png)
 Model, just made for stop-loss
 
+### Trade Window (Stoploss + Monitoring Stock REALTIME)
+![TradeWindow](./readme_resources/trade_window.png)
+
 ### Installing Environment
 * CUDA: 12.4
 * Python: 3.9.12
