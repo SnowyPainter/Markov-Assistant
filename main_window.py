@@ -85,9 +85,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_layout.addLayout(self.backtest_panel_layout)
         self.backtest_layout.addLayout(self.backtest_control_layout)
         
-        base_layout.addLayout(self.portfolio_layout)
-        base_layout.addLayout(self.chart_layout)
-        base_layout.addLayout(self.backtest_layout)
+        base_layout.addLayout(self.portfolio_layout, stretch=1)
+        base_layout.addLayout(self.chart_layout, stretch=4)
+        base_layout.addLayout(self.backtest_layout, stretch=3)
         
         return base_layout
     
@@ -149,7 +149,7 @@ class MyApp(QMainWindow, window_handler.Handler):
     def setDetails(self):
         self.backtest_simulate = True
         val_int = QIntValidator()
-        
+
         self.dnn_stocks_input.setPlaceholderText("Split stock code with comma.")
         self.lstm_stocks_input.setPlaceholderText("Split stock code with comma.")
         self.dnn_target_stock_input.setPlaceholderText("Prediction target stock (only 1)")
@@ -521,5 +521,5 @@ if __name__ == '__main__':
    app = QApplication(sys.argv)
    app.setStyleSheet(open('./resources/style.qss', 'r').read())
    ex = MyApp()
-   ex.show()
+   ex.showMaximized()
    sys.exit(app.exec_())

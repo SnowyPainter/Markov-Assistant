@@ -3,6 +3,23 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import sys, os, json
 
+def calculate_trade(stock):
+    logs = read_all_trades()
+    if logs == []:
+        QMessageBox.information(None, "Error", "There's no trades you did.")
+        return
+    logs = [item for item in logs if item.get("stock") == stock]
+    profit = 0
+    for item in logs:
+        action = item.get("action")
+        units = float(item.get('units'))
+        price = float(item.get("price"))
+        if action == "buy":
+            profit -= (units * price)
+        if action == "sell":
+            profit += ((units * price) - ((units * price) * (0.0025)))
+    return profit
+
 def log_trade(stock, action, units, price):
     if not units or not price:
         QMessageBox.information(None, "Error", "Please put informations about stock.")

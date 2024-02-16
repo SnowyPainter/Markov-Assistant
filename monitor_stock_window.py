@@ -64,8 +64,8 @@ class MonitorStockWindow(QWidget):
         controls_layout.addLayout(interact_layout)
         controls_layout.addLayout(env_info_layout)
         controls_layout.addLayout(runstop_layout)
-        base_layout.addLayout(controls_layout)
-        base_layout.addWidget(self.prev_price_list)
+        base_layout.addLayout(controls_layout, stretch=3)
+        base_layout.addWidget(self.prev_price_list, stretch=1)
         
         self.prev_price_list.itemClicked.connect(self.prev_price_list_item_clicked)
         self.placeorder_btn.clicked.connect(self.placeorder_btn_cliked)
@@ -90,22 +90,7 @@ class MonitorStockWindow(QWidget):
         self.placeorder_window.show()
     
     def aggregate_btn_clicked(self):
-        logs = logger.read_all_trades()
-        if logs == []:
-            QMessageBox.information(None, "Error", "There's no trades you did.")
-            return
-        
-        stock = self.symbol_input.text().strip()
-        logs = [item for item in logs if item.get("stock") == stock]
-        profit = 0
-        for item in logs:
-            action = item.get("action")
-            units = float(item.get('units'))
-            price = float(item.get("price"))
-            if action == "buy":
-                profit -= (units * price)
-            if action == "sell":
-                profit += ((units * price) - ((units * price) * (0.0025)))
+        profit = logger.calculate_trade(self.symbol_input.text().strip())
                 
         QMessageBox.information(self, "Self-Trading Profit", f"Profit: {profit}")
     
