@@ -4,10 +4,10 @@ import handlers.window_handler as window_handler
 import pandas as pd
 import os, json
 import portfolio
+from tensorflow import keras
 from train_result_window import *
 from trade_window import *
 from train_rlmodel_window import *
-from monitor_stock_window import *
 from monitor_stoploss_window import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -145,7 +145,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_simulate_day_before_input = QLineEdit()
         self.backtest_simulate_period_label = QLabel('Period:')
         self.backtest_simulate_period_input = QLineEdit()
-        self.backtest_realtime_monitor_btn = QPushButton("Monitor", self)
         
         self.realtime_stoploss_monitor_btn = QPushButton("Stoploss", self)
         
@@ -205,7 +204,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_new_model_btn.clicked.connect(self.backtest_new_model_btn_clicked)
         self.backtest_open_model_btn.clicked.connect(self.backtest_open_model_btn_clicked)
         self.backtest_simulate_checkbox.stateChanged.connect(self.toggle_simulation)
-        self.backtest_realtime_monitor_btn.clicked.connect(self.backtest_realtime_monitor_btn_clicked)
         self.realtime_stoploss_monitor_btn.clicked.connect(self.realtime_stoploss_monitor_btn_clicked)
 
     def addWidgets(self):
@@ -264,7 +262,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_day_before_input)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_label)
         self.backtest_control_simulate_layout.addWidget(self.backtest_simulate_period_input)
-        self.backtest_control_simulate_layout.addWidget(self.backtest_realtime_monitor_btn)
         self.backtest_control_simulate_layout.addWidget(self.realtime_stoploss_monitor_btn)
         
         widget = QWidget()
@@ -448,7 +445,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         QMessageBox.information(self, "Stop Trade", "Stopped Trading with realtime data.")
     
     def backtest_run_btn_clicked(self):
-        if self.backtesting or self.handle_model_path_error(self.backtest_model_path) == -1:
+        if self.backtesting or self.handle_model_path_error(self.backtest_trade_model_path) == -1 or self.handle_model_path_error(self.backtest_sideway_model_path) == -1:
             return
         
         symbol = self.backtest_option_symbol_input.text().strip()
@@ -477,25 +474,23 @@ class MyApp(QMainWindow, window_handler.Handler):
         tsl = None if tsl == 0.0 else tsl
         tp = None if tp == 0.0 else tp
         target = symbol + '_Price'
-        symbols = [symbol]
-        features = data.stock_data_columns()
-        features.append(target)
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
         if self.backtest_simulate:
             daybefore = int(self.backtest_simulate_day_before_input.text())
             period = self.backtest_simulate_period_input.text()
-            df = data.create_dataset(symbols, start=data.today_before(daybefore), end=data.today(), interval=period)
+            df = data.create_dataset([symbol], start=data.today_before(daybefore), end=data.today(), interval=period)
             if self.handle_flaw_dataset(df) == -1:
                 return
         self.backtest_plot.clear()
         self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
+        self.backtest_plot.canvas.destroy_prev = False
         self.backtest_trade_status_label.setText("TRADE STATUS")
         
-        model = models.load(self.backtest_model_path)
-        self.btt = QTBacktest.BacktestThread(target, features, df, symbols, 1, lags=lags)
+        env = environment.StockMarketEnvironment(self.trade_sideway_model, self.trade_model, df, target, lags=lags)
+        self.btt = QTBacktest.BacktestThread(symbol, env, 1)
         self.btt.signal.connect(self.handle_backtest_result)
-        self.btt.set_backtest_strategy(model, amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate), guarantee=guarantee)
+        self.btt.set_backtest_strategy(amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate), guarantee=guarantee)
         self.backtesting = True
         self.btt.start()
     
@@ -505,11 +500,15 @@ class MyApp(QMainWindow, window_handler.Handler):
         sub.exec_()
         
     def backtest_open_model_btn_clicked(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './', "Keras (*.keras)")[0]
-        if fname == '':
+        folder_path = QFileDialog.getExistingDirectory(None, "Folder For New Model", "", QFileDialog.ShowDirsOnly)
+        if folder_path:
+            self.backtest_trade_model_path = os.path.join(folder_path, f"trade.keras")
+            self.backtest_sideway_model_path = os.path.join(folder_path, f"sideway.keras")
+        else:
             return
-        self.backtest_opened_model_label.setText(fname)
-        self.backtest_model_path = fname
+        self.backtest_opened_model_label.setText(f"{self.backtest_trade_model_path}")
+        self.trade_model = keras.models.load_model(self.backtest_trade_model_path)
+        self.trade_sideway_model = keras.models.load_model(self.backtest_sideway_model_path)
         
     def toggle_simulation(self, state):
         if state == 2:
@@ -520,13 +519,7 @@ class MyApp(QMainWindow, window_handler.Handler):
             self.backtest_simulate = False
             self.backtest_simulate_day_before_input.setEnabled(False)
             self.backtest_simulate_period_input.setEnabled(False)
-    
-    def backtest_realtime_monitor_btn_clicked(self):
-        window = MonitorStockWindow()
-        window.initUI(self.selected_stock)
-        self.windows.append(window)
-        window.show()
-    
+
     def realtime_stoploss_monitor_btn_clicked(self):
         window = MonitorStoplossWindow()
         window.initUI(self.selected_stock)

@@ -16,7 +16,7 @@ class Handler:
             units = info.units
             price = round(info.price, 2)
             action = info.trade_type
-            ttype = "buy" if action == tradeinfo.TradeType.BUY else "sell"
+            ttype = "Buy" if action == tradeinfo.TradeType.BUY else "Sell"
             p = 0
             if infotype == tradeinfo.InfoType.TAKEPROFIT:
                 p = info.takeprofit
@@ -24,13 +24,15 @@ class Handler:
                 p = info.stoploss
             elif infotype == tradeinfo.InfoType.TRAILSTOPLOSS:
                 p = info.stoploss
-            pos = "LONG" if position == tradeinfo.TradePosition.LONG else "SHORT"
-            self.backtest_trade_status_label.setText(f"{pos} : {ttype} {units} for {price}, {p}")
+            self.backtest_trade_status_label.setText(f"{ttype} {units} for {price}, {p}")
             str_date = date
             date = datetime.datetime.strptime(str_date, '%Y-%m-%d').strftime("%Y-%m-%d %H:%M:%S")
             date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
             self.backtest_plot.update_plot(date, net_wealth)
             logger.log_backtest(net_wealth, str_date, infotype=int(infotype), position=int(position), tradetype=int(action), p=p, units=units, price=price)
+        elif(infotype == tradeinfo.InfoType.HOLDING):
+            price = round(info.price, 4)
+            self.backtest_trade_status_label.setText(f"Holding {price}")
         elif(infotype == tradeinfo.InfoType.CLOSINGOUT or self.btt.stopped):
             self.previous_net_wealth = net_wealth
             self.backtesting = False

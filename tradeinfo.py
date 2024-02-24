@@ -8,6 +8,7 @@ class InfoType(IntEnum):
     CLOSINGOUT = 4
     NONE = 5
     WAITFORNEWDATA = 6
+    HOLDING = 7
 class TradeType(IntEnum):
     BUY = 1
     SELL = 2
@@ -17,6 +18,13 @@ class TradePosition(IntEnum):
     SHORT = 2
     NONE = 3
 
+def holding(price):
+    ti = TradeInfo(data.today())
+    ti.set_info_type(InfoType.HOLDING)
+    ti.set_trade_type(TradeType.NONE)
+    ti.set_price(price)
+    return ti
+    
 def wait_for_data():
     ti = TradeInfo(data.today())
     ti.set_info_type(InfoType.WAITFORNEWDATA)

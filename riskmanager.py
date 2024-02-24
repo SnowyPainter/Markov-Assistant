@@ -11,21 +11,19 @@ class RiskManager():
         self.min_price = price
         self.max_price = price
 
-    def __init__(self, env, model, amount, ptc, ftc, verbose=True, waiting=False):
+    def __init__(self, env, amount, ptc, ftc, waiting=False):
         self.env = env
-        self.model = model
         self.initial_amount = amount
         self.current_balance = amount
         self.ptc = ptc
         self.ftc = ftc
-        self.verbose = verbose
         self.units = 0
         self.trades = 0
         self.waiting = waiting
 
     def get_date_price(self, bar):
-        date = str(self.env.data.index[bar])[:10]
-        price = self.env.data[self.env.symbol].iloc[bar]
+        date = str(self.env.df.index[bar])[:10]
+        price = self.env.df[self.env.target].iloc[bar]
         return date, price
 
     def calculate_net_wealth(self, price):
@@ -90,43 +88,44 @@ class RiskManager():
         self.net_wealths = list()
         
         bar = self.env.lags
+        units = 0
         # 공매도 금지 설정
-        while bar < len(self.env.data) or self.waiting:
-            if bar >= len(self.env.data): #data size is less than bar, wait for appending data or just waiting realtime data. for start.
+        while bar < len(self.env.df_) or self.waiting:
+            if bar >= len(self.env.df_): #data size is less than bar, wait for appending data or just waiting realtime data. for start.
                 info = tradeinfo.TradeInfo(datetime.datetime.now())
                 info.set_info_type(tradeinfo.InfoType.WAITFORNEWDATA)
                 yield [info]
-            elif bar < len(self.env.data):
+            elif bar < len(self.env.df_):
                 infos = []
                 self.wait = max(0, self.wait - 1)
                 date, price = self.get_date_price(bar)
 
                 state = self.env.get_state(bar)
-                action = np.argmax(self.model.predict(self._reshape(state.values), verbose=0)[0, 0])
-                position = 1 if action == 1 else -1
-                if self.position in [0, -1] and position == 1: # buy
-                    info = self.place_buy_order(bar, self.current_balance)
-                    if info.units >= 0:
+                state = self._reshape(state)
+                trading = True if np.argmax(self.env.sideway_agent.predict(state, verbose=0)[0, 0]) == 1 else False
+                if trading:
+                    action = np.argmax(self.env.trade_agent.predict(state, verbose=0)[0, 0])
+                    if action == 0:
+                        info = self.place_buy_order(bar, self.current_balance)
                         infos.append(info)
-                        self.position = 1
-                elif self.position == 1 and position == -1 and self.units > 0: #sell
-                    loss = (price - self.entry_price) / self.entry_price
-                    if loss >= self.tp:
-                        tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
-                        if guarantee:
-                            price = self.entry_price * (1 + self.tp)
-                            tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
-                            tpinfo.set_price(price)
-                        else:
-                            tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
-                        infos.append(tpinfo)
-                        self.position = 0
-                    elif loss <= -self.sl:
-                        tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
-                        tpinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
-                        infos.append(tpinfo)
-                        self.position = 0
-                    
+                    elif action == 1 and units > 0:
+                        loss = (price - self.entry_price) / self.entry_price
+                        if loss >= self.tp:
+                            tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
+                            if guarantee:
+                                price = self.entry_price * (1 + self.tp)
+                                tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
+                                tpinfo.set_price(price)
+                            else:
+                                tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
+                            infos.append(tpinfo)
+                        elif loss <= -self.sl:
+                            slinfo = self.place_sell_order(bar, units=self.units, gprice=price)
+                            slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
+                            infos.append(slinfo)
+                else:
+                    holdinfo = tradeinfo.holding(price)
+                    infos.append(holdinfo)
                 self.net_wealths.append([date, self.calculate_net_wealth(price)])
                 bar += 1
                 if len(infos) > 0:
@@ -137,16 +136,15 @@ class RiskManager():
         yield self.close_out(bar)
         
 class MonitorStock:
-    def __init__(self, env, model):
+    def __init__(self, env):
         self.env = env
-        self.model = model
         self.stop = False
     def _reshape(self, state):
         return np.reshape(state, [1, self.env.lags, self.env.n_features])
     
     def get_date_price(self, bar):
-        date = str(self.env.data.index[bar])[:10]
-        price = self.env.data[self.env.symbol].iloc[bar]
+        date = str(self.env.df.index[bar])[:10]
+        price = self.env.df[self.env.target].iloc[bar]
         return date, price
     
     def stop_monitor(self):
@@ -155,33 +153,35 @@ class MonitorStock:
     def monitor(self):
         self.position = 0 # none
         self.bar = self.env.lags
-        
+        entry = 0
+        units = 0
         while not self.stop:
-            if self.bar >= len(self.env.data) or len(self.env.data) < self.env.lags:
+            if self.bar >= len(self.env.df_) or len(self.env.df_) < self.env.lags:
                 yield tradeinfo.wait_for_data()
                 continue
-            
             date, price = self.get_date_price(self.bar)
-                
             state = self.env.get_state(self.bar)
-            action = np.argmax(self.model.predict(self._reshape(state.values), verbose=0)[0, 0])
-            position = 1 if action == 1 else -1 #1 = buy, -1 = sell
-            
+
             ti = tradeinfo.none()
             ti.set_price(price)
-            if self.position in [0, -1] and position == 1:
-                self.position = 1
-                self.entry_price = price
-                ti = tradeinfo.buy(price)
-            elif self.position == 1 and position == -1:
-                loss = (price - self.entry_price) / self.entry_price
-                if loss >= 0.0025:
-                    ti = tradeinfo.sell(price)    
-                    ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)
-                elif loss < -0.01:
-                    ti = tradeinfo.sell(price)
-                    ti.set_info_type(tradeinfo.InfoType.STOPLOSS)
-                self.position = -1
+            
+            trading = True if np.argmax(self.env.sideway_agent.predict(self._reshape(state), verbose=0)[0, 0]) == 1 else False
+            if trading:
+                action = np.argmax(self.env.trade_agent.predict(state, verbose=0)[0, 0])
+                if action == 0:
+                    entry = price
+                    ti.set_trade_type(tradeinfo.TradeType.BUY)
+                elif action == 1 and units > 0:
+                    loss = (price - entry) / entry
+                    ti.set_trade_type(tradeinfo.TradeType.SELL)
+                    if loss > 0.0025:
+                        ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)
+                    else:
+                        ti.set_info_type(tradeinfo.InfoType.STOPLOSS)
+                        
+            else:
+                ti.set_trade_type(tradeinfo.TradeType.NONE)
+                ti.set_info_type(tradeinfo.InfoType.HOLDING)
             
             self.bar += 1
             yield ti
@@ -217,6 +217,5 @@ class MonitorStoploss:
             ti = tradeinfo.none()
             ti.set_price(self.env.data.iloc[i])
             yield ti
-        #print(f"sold : {self.env.data.iloc[i+lags]}")
             
         

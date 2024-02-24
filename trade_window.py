@@ -4,12 +4,13 @@ from PyQt5.QtGui import *
 import os, datetime
 import QTMonitorStock, QTMonitorStoploss, tradeinfo
 import models, resources.canvas as canvas, data, QTLearn, environment, logger
+from tensorflow import keras
+import pandas as pd
 
 class TradeWindow(QDialog):
     def __init__(self):
         super(TradeWindow, self).__init__(None)
         self.log_file = ""
-        self.monitor_model_path = ""
         self.trading = False
         self.center()
         
@@ -127,7 +128,9 @@ class TradeWindow(QDialog):
         price = info.price
         self.canvas.update_plot(date, price)
         t = "*"
-        if trade_type != tradeinfo.TradeType.NONE:
+        if info.info_type == tradeinfo.InfoType.HOLDING:
+            t = "Hold"
+        elif trade_type != tradeinfo.TradeType.NONE:
             if trade_type == tradeinfo.TradeType.BUY:
                 t = "Buy"
                 self.canvas.canvas.add_text_at_value("Buy", date, price, color="green")    
@@ -146,12 +149,18 @@ class TradeWindow(QDialog):
             self.canvas.canvas.add_axhline_at_value(price.iloc[0], "r")
     
     def strat_trade_btn_clicked(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './', "Keras (*.keras)")[0]
-        if fname == '':
+        folder_path = QFileDialog.getExistingDirectory(None, "Folder For New Model", "", QFileDialog.ShowDirsOnly)
+        if folder_path:
+            self.backtest_trade_model_path = os.path.join(folder_path, f"trade.keras")
+            self.backtest_sideway_model_path = os.path.join(folder_path, f"sideway.keras")
+        else:
             return
-        self.monitor_model_path = fname
+        self.trade_model = keras.models.load_model(self.backtest_trade_model_path)
+        self.trade_sideway_model = keras.models.load_model(self.backtest_sideway_model_path)
+        
         self.canvas.clear()
         self.canvas.canvas.set_major_formatter("%H:%M:%S")
+        self.canvas.canvas.destroy_prev = False
         
         str_lags = self.lags_input.text()
         str_update_interval = self.update_interval_input.text()
@@ -160,12 +169,17 @@ class TradeWindow(QDialog):
             return
         lags = int(str_lags)
         interval = int(str_update_interval)
-        if not os.path.exists(self.monitor_model_path):
+        if not os.path.exists(self.backtest_trade_model_path) or not os.path.exists(self.backtest_sideway_model_path):
             QMessageBox.information(self, "Error", "Select your agent please.")
             return
         
+        target = f"{self.symbol}_Price"
+        df = pd.DataFrame({target:[], 'Datetime':[]})
+        df.set_index('Datetime')
+        env = environment.StockMarketEnvironment(self.trade_sideway_model, self.trade_model, df, target, lags=lags)
+        
         self.trading = True
-        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, models.load(self.monitor_model_path), lags, interval)
+        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, env, interval)
         self.montior_thread.signal.connect(self.monitor_thread_result_handler)
         self.montior_thread.start()
     def stoploss_btn_clicked(self):

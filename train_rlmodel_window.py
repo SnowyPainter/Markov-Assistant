@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import models, resources.canvas as canvas, data, QTLearn, environment
+import os
 
 class TrainRLModelWindow(QDialog):
     def __init__(self):
@@ -63,25 +64,36 @@ class TrainRLModelWindow(QDialog):
     def learn_clicked(self):
         if self.is_learning:
             return
-        
-        self.fname = QFileDialog.getSaveFileName(self, '.Keras save file', "./my_model.keras", "Keras (*.keras)")[0]
-        if self.fname == "":
+        symbol = self.symbol_input.text().strip()
+        folder_path = QFileDialog.getExistingDirectory(None, "Folder For New Model", "", QFileDialog.ShowDirsOnly)
+        if folder_path:
+            try:
+                new_dir_path = os.path.join(folder_path, f"{symbol}")
+                if os.path.exists(new_dir_path):
+                    QMessageBox.information(self, "Existing Folder", f"{symbol} RL model folder is existing.")
+                    return
+                os.makedirs(new_dir_path)
+                self.trade_file_name = os.path.join(new_dir_path, f"trade.keras")
+                self.sideway_file_name = os.path.join(new_dir_path, f"sideway.keras")
+            except Exception as e:
+                QMessageBox.critical(None, "Error", f"Error while system create a directory: {str(e)}", QMessageBox.Ok)
+        else:
             return
-        
         lags = int(self.lags_input.text())
         episodes = int(self.episodes_input.text())
-        symbol = self.symbol_input.text().strip()
         days = int(self.train_days_input.text().strip())
         interval = self.train_interval_input.text().strip()
         target = symbol+'_Price'
         features = data.stock_data_columns()
         features.append(target)
         df = data.create_dataset([symbol], start=data.today_before(days), end=data.today(), interval=interval)
-        learn_env = environment.FinanceEnv(df, target, features, lags=lags, data_preparing_func=data.prepare_stock_data, min_performance=0.9)
+        sideway_agent = models.DQNMulti(lags, 2, len(features)) # 0:hold, 1:trade
+        trade_agent = models.DQNMulti(lags, 2, len(features)) # 0:buy 1:sell
+        self.stock_market_env = environment.StockMarketEnvironment(sideway_agent, trade_agent, df, target, lags=lags)
+        
         models.set_seeds(100)
         self.is_learning = True
-        self.agent = models.DQNAgent(learn_env, max_steps=len(df), batch_size=128)
-        self.learning_thread = QTLearn.LearningThread(self.agent, episodes)
+        self.learning_thread = QTLearn.StockMarketLearningThread(self.stock_market_env, episodes, 64)
         self.learning_thread.update_signal.connect(self.update_results)
         self.learning_thread.start()
 
@@ -89,7 +101,8 @@ class TrainRLModelWindow(QDialog):
         if episode_data.episode == -1: #end
             self.learn_button.setText("Learn")
             self.is_learning = False
-            self.agent.model.save(self.fname)
+            self.stock_market_env.trade_agent.model.save(self.trade_file_name)
+            self.stock_market_env.sideway_agent.model.save(self.sideway_file_name)
             QMessageBox.information(self, "Learning finished!", "Your model finished learning.")
         else:
             self.learn_button.setText(f"Learning {episode_data.episode}")     

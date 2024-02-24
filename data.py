@@ -145,12 +145,17 @@ def calculate_rsi(prices, period=14):
 def stock_data_columns():
     return ['sma', 'ema', 'rsi', 'r']
 
-def prepare_stock_data(df):
-    df["sma"] = calculate_sma(df['nvda_Price'])
-    df["ema"] = calculate_ema(df['nvda_Price'])
-    df["rsi"] = calculate_rsi(df['nvda_Price'])
-    df['r'] = np.log(df['nvda_Price'] / df['nvda_Price'].shift(1))
-    df.dropna(inplace=True)
-    df_ = (df - df.mean()) / df.std()
-    df['d'] = np.where(df['r'] > 0, 1, 0)
-    return df, df_, df_.columns
+def prepare_stock_data(df, target):
+    new = pd.DataFrame({
+        target:df[target],
+        "sma":calculate_sma(df[target]),
+        "ema":calculate_ema(df[target]),
+        "rsi":calculate_rsi(df[target]),
+        "r":np.log(df[target] / df[target].shift(1))
+    })
+    print(new)
+    new.dropna(inplace=True)
+    
+    new_ = (new - new.mean()) / new.std()
+    new['d'] = np.where(new_['r'] > 0, 1, 0)
+    return new, new_, new_.columns

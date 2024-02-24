@@ -3,6 +3,7 @@ import numpy as np
 import random
 import math
 import pandas as pd
+import data, models
 
 def set_seeds(seed=100):
     random.seed(seed)
@@ -145,3 +146,77 @@ class StoplossEnv:
         self.prev_price = current_price
         state = self._get_state()
         return state.values, reward, done, {}
+    
+class StockMarketEnvironment:
+    def __init__(self, sideway_agent, trade_agent, df, target, window=20, lags=3):
+        self.sideway_agent = sideway_agent
+        self.trade_agent = trade_agent
+        self.target = target
+        self.bar = 0 
+        self.min_performance = 0.75
+        self.lags = lags
+        self.window = window
+        self._prepare_data = data.prepare_stock_data
+        self.raw = df
+        self.raw.set_index('Datetime', inplace=True)
+        self.df, self.df_, self.features = self._prepare_data(df, target)
+        self.n_features = len(self.features)
+    
+    def _get_state(self):
+        return np.array([[self.df_.iloc[self.bar-self.lags:self.bar]]])
+    def get_state(self, bar):
+        return np.array([[self.df_.iloc[bar-self.lags:bar]]])
+    
+    def append_raw(self, d):
+        self.raw = pd.concat([self.raw, d])
+        self.df, self.df_, self.features = self._prepare_data(self.raw, self.target)
+
+    def reset(self):
+        self.total_reward = 0
+        self.performance = 1
+        self.bar = self.lags
+        state = self.df_.iloc[self.bar - self.lags:self.bar]
+        return state.values, state.values
+
+    def step(self, sideway_act, trade_act):
+        #sideway trading/holding rewarding
+        volatility = np.std(self.df_[self.target][self.bar:self.bar + self.window])
+        sideway_reward = 0 if volatility <= 0.07 else 1
+        
+        #trade rewarding
+        r = self.df_['r'].iloc[self.bar]
+        if sideway_act == 1:
+            d = self.df['d'].iloc[self.bar]
+            trade_reward = 1 if trade_act == d else 0
+            penalty = abs(r) if d else -abs(r)
+            sma = self.df_['sma'].iloc[self.bar]
+            ema = self.df_['ema'].iloc[self.bar]
+            rsi = self.df_['rsi'].iloc[self.bar]
+            if self.df_[self.target].iloc[self.bar] > sma:
+                trade_reward += 1
+            else:
+                trade_reward -= 1
+            if self.df_[self.target].iloc[self.bar] > ema:
+                trade_reward += 1
+            else:
+                trade_reward -= 1
+            if rsi > 70 or rsi < 30:
+                trade_reward -= 1
+            
+            self.performance *= math.exp(penalty)
+            
+        else:
+            trade_reward = 0
+            
+        self.bar += 1        
+        if self.bar >= len(self.df_):
+            done = True
+        elif (self.performance < self.min_performance and self.bar > self.lags + 15):
+            done = True
+        else:
+            done = False
+        info = {}
+        
+        sideway_state = self._get_state()
+        trade_state = self._get_state()
+        return sideway_state, trade_state, sideway_reward, trade_reward, done, info
