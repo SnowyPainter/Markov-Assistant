@@ -29,6 +29,7 @@ class FinanceEnv:
         self.start = start
         self.end = end
         self.raw = raw
+        self.observation_space = observation_space(self.lags)
         self.action_space = action_space(2)
         self.prepare_data = data_preparing_func
         self.data, self.data_ = self.prepare_data(self.raw, self.start, self.end, self.symbol, self.window)
@@ -47,8 +48,7 @@ class FinanceEnv:
         self.total_reward = 0
         self.performance = 1
         self.bar = self.lags
-        state = self.data_[self.features].iloc[self.bar -
-                                               self.lags:self.bar]
+        state = self.data_[self.features].iloc[self.bar - self.lags:self.bar]
         return state.values
 
     def step(self, action):

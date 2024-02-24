@@ -192,20 +192,27 @@ class MonitorStock:
                 yield tradeinfo.wait_for_data()
                 continue
             
+            date, price = self.get_date_price(self.bar)
+                
             state = self.env.get_state(self.bar)
             action = np.argmax(self.model.predict(self._reshape(state.values), verbose=0)[0, 0])
             position = 1 if action == 1 else -1 #1 = buy, -1 = sell
             
-            date, price = self.get_date_price(self.bar)
             ti = tradeinfo.none()
             ti.set_price(price)
-            
             if self.position in [0, -1] and position == 1:
                 self.position = 1
+                self.entry_price = price
                 ti = tradeinfo.buy(price)
-            elif self.position in [0, 1] and position == -1:
+            elif self.position == 1 and position == -1:
+                loss = (price - self.entry_price) / self.entry_price
+                if loss > 0.0025:
+                    ti = tradeinfo.sell(price)    
+                    ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)
+                else:
+                    ti = tradeinfo.sell(price)
+                    ti.set_info_type(tradeinfo.InfoType.STOPLOSS)
                 self.position = -1
-                ti = tradeinfo.sell(price)
             
             self.bar += 1
             yield ti

@@ -117,6 +117,7 @@ class TradeWindow(QDialog):
         self._log_trade("buy")
     def sell_btn_clicked(self):
     
+    
         self._log_trade("sell")
     def monitor_thread_result_handler(self, info):
         if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
@@ -131,7 +132,10 @@ class TradeWindow(QDialog):
                 t = "Buy"
                 self.canvas.canvas.add_text_at_value("Buy", date, price, color="green")    
             elif trade_type == tradeinfo.TradeType.SELL:
-                t = "Sell"
+                if info.info_type == tradeinfo.InfoType.TAKEPROFIT:
+                    t = "Sell - Take Profit"
+                elif info.info_type == tradeinfo.InfoType.STOPLOSS:
+                    t = "Sell - Stop Loss"
                 self.canvas.canvas.add_text_at_value("Sell", date, price, color="red")
         
         self.price_list.addItem(f"{t} / {price}")

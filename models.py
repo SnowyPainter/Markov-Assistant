@@ -227,10 +227,10 @@ class QLearningAgent:
 class DQNAgent:
     def __init__(self, env, max_steps, batch_size):
         self.env = env
-        self.state_size = env.observation_space.shape[0]
-        self.action_size = env.action_space.n
         self.max_steps = max_steps
         self.batch_size = batch_size
+        self.state_size = env.observation_space.shape[0]
+        self.action_size = env.action_space.n
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95  # Discount factor
         self.epsilon = 1.0  # Exploration rate
@@ -241,7 +241,7 @@ class DQNAgent:
         
     def _build_model(self):
         model = Sequential()
-        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(24, input_shape=(self.state_size, self.env.n_features), activation='relu'))
         model.add(Dense(24, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
@@ -253,8 +253,8 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        act_values = self.model.predict(state, verbose=0)
-        return np.argmax(act_values[0])
+        action = self.model.predict(state, verbose=0)[0, 0]
+        return np.argmax(action)
     
     def replay(self, batch_size):
         minibatch = random.sample(self.memory, batch_size)
@@ -267,19 +267,19 @@ class DQNAgent:
             self.model.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-    
+            
     def learn(self, episodes):
         for e in range(episodes):
             state = self.env.reset()
-            state = np.reshape(state, [1, self.state_size])
+            state = np.reshape(state, [1, self.state_size, self.env.n_features])
             for time in range(self.max_steps):
                 action = self.act(state)
                 next_state, reward, done, _ = self.env.step(action)
-                next_state = np.reshape(next_state, [1, self.state_size])
+                next_state = np.reshape(next_state, [1, self.state_size, self.env.n_features])
                 self.remember(state, action, reward, next_state, done)
                 state = next_state
                 if done:
-                    yield EpisodeData(e+1, treward=self.env.total_reward)
+                    yield EpisodeData(e+1, treward=self.env.total_reward, performance=self.env.performance)
                     break
             if len(self.memory) > self.batch_size:
                 self.replay(self.batch_size)

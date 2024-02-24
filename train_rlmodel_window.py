@@ -80,7 +80,7 @@ class TrainRLModelWindow(QDialog):
         learn_env = environment.FinanceEnv(df, target, features, window=20, lags=lags, data_preparing_func=data.prepare_RSMV_data, min_performance=0.9)
         models.set_seeds(100)
         self.is_learning = True
-        self.agent = models.SARSA(learn_env)
+        self.agent = models.DQNAgent(learn_env, max_steps=len(df), batch_size=128)
         self.learning_thread = QTLearn.LearningThread(self.agent, episodes)
         self.learning_thread.update_signal.connect(self.update_results)
         self.learning_thread.start()
