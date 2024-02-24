@@ -127,19 +127,30 @@ def lstm_prepare_dataset(df):
     df = normalize_zscore(df)
     return df[r_cols]
 
-def prepare_RSMV_data(df, start, end, symbol, window):
-    data = pd.DataFrame(df[symbol])
-    data = data.iloc[start:]
-    data['r'] = np.log(data / data.shift(1))
-    data.dropna(inplace=True)
-    data['s'] = data[symbol].rolling(window).mean()
-    data['m'] = data['r'].rolling(window).mean()
-    data['v'] = data['r'].rolling(window).std()
-    data.dropna(inplace=True)
-    data_ = (data - data.mean()) / data.std()
-    data['d'] = np.where(data['r'] > 0, 1, 0)
-    data['d'] = data['d'].astype(int)
-    if end is not None:
-        data = data.iloc[:end - start]
-        data_ = data_.iloc[:end - start]
-    return data, data_
+pd.options.mode.chained_assignment = None
+
+def calculate_sma(prices, period=20):
+    return prices.rolling(window=period).mean()
+
+def calculate_ema(prices, period=20):
+    return prices.ewm(span=period, adjust=False).mean()
+
+def calculate_rsi(prices, period=14):
+    delta = prices.diff(1)
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
+def stock_data_columns():
+    return ['sma', 'ema', 'rsi', 'r']
+
+def prepare_stock_data(df):
+    df["sma"] = calculate_sma(df['nvda_Price'])
+    df["ema"] = calculate_ema(df['nvda_Price'])
+    df["rsi"] = calculate_rsi(df['nvda_Price'])
+    df['r'] = np.log(df['nvda_Price'] / df['nvda_Price'].shift(1))
+    df.dropna(inplace=True)
+    df_ = (df - df.mean()) / df.std()
+    df['d'] = np.where(df['r'] > 0, 1, 0)
+    return df, df_, df_.columns

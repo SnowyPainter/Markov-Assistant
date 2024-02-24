@@ -19,11 +19,10 @@ class action_space:
         return random.randint(0, self.n - 1)
 
 class FinanceEnv:
-    def __init__(self, raw, symbol, features, window, lags, data_preparing_func, min_performance=0.85, start=0, end=None):
+    def __init__(self, raw, symbol, features, lags, data_preparing_func, min_performance=0.85, start=0, end=None):
         self.symbol = symbol
         self.features = features
         self.n_features = len(features)
-        self.window = window
         self.lags = lags
         self.min_performance = min_performance
         self.start = start
@@ -32,11 +31,11 @@ class FinanceEnv:
         self.observation_space = observation_space(self.lags)
         self.action_space = action_space(2)
         self.prepare_data = data_preparing_func
-        self.data, self.data_ = self.prepare_data(self.raw, self.start, self.end, self.symbol, self.window)
+        self.data, self.data_, cols = self.prepare_data(self.raw)
 
     def append_raw(self, data):
         self.raw = pd.concat([self.raw, data])
-        self.data, self.data_ = self.prepare_data(self.raw, self.start, self.end, self.symbol, self.window)
+        self.data, self.data_, cols = self.prepare_data(self.raw)
 
     def _get_state(self):
         return self.data_[self.features].iloc[self.bar - self.lags:self.bar]
@@ -56,9 +55,27 @@ class FinanceEnv:
         ret = self.data['r'].iloc[self.bar]
         pos_reward = 1 if correct else 0
         penalty_reward = abs(ret) if correct else -abs(ret)
-        self.total_reward += pos_reward
+        
+        sma = self.data['sma'].iloc[self.bar]
+        ema = self.data['ema'].iloc[self.bar]
+        rsi = self.data['rsi'].iloc[self.bar]
+        # 이동평균선 상향돌파 시 보상, 하향돌파 시 패널티
+        if self.data[self.symbol].iloc[self.bar] > sma:
+            pos_reward += 1
+        else:
+            pos_reward -= 1
+        # 지수 이동평균상 상향돌파 시 보상, 하향돌파 시 패널티
+        if self.data[self.symbol].iloc[self.bar] > ema:
+            pos_reward += 1
+        else:
+            pos_reward -= 1
+        # RSI가 70 이상이면 과매수, 30 이하이면 과매도로 패널티
+        if rsi > 70 or rsi < 30:
+            pos_reward -= 1
+        
         self.bar += 1
         self.performance *= math.exp(penalty_reward)
+        self.total_reward += pos_reward
         if self.bar >= len(self.data):
             done = True
         elif pos_reward == 1:

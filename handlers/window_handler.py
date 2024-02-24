@@ -12,7 +12,7 @@ class Handler:
         infotype = info.info_type
         position = info.trade_position
         
-        if infotype == tradeinfo.InfoType.TAKEPROFIT or infotype == tradeinfo.InfoType.STOPLOSS or infotype == tradeinfo.InfoType.TRAILSTOPLOSS:
+        if info.trade_type == tradeinfo.TradeType.BUY or info.trade_type == tradeinfo.TradeType.SELL:
             units = info.units
             price = round(info.price, 2)
             action = info.trade_type

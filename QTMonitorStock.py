@@ -12,11 +12,12 @@ class QTMonitorStockThread(QThread):
         super(QThread, self).__init__()
         target = target_symbol + '_Price'
         self.tickers = [target_symbol]
-        features = [target, 'r', 's', 'm', 'v']
+        features = data.stock_data_columns()
+        features.append(target)
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
         
-        self.env = environment.FinanceEnv(df, target, features=features, window=10, lags=model_lags, data_preparing_func=data.prepare_RSMV_data, min_performance=0.0, start=0, end=None)
+        self.env = environment.FinanceEnv(df, target, features=features, lags=model_lags, data_preparing_func=data.prepare_stock_data, min_performance=0.0, start=0, end=None)
         self.model = model
         self.interval_sec = interval_sec
     

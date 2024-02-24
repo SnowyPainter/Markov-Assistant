@@ -478,7 +478,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         tp = None if tp == 0.0 else tp
         target = symbol + '_Price'
         symbols = [symbol]
-        features = [target, 'r', 's', 'm', 'v']
+        features = data.stock_data_columns()
+        features.append(target)
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
         if self.backtest_simulate:

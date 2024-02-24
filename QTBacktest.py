@@ -11,7 +11,7 @@ class BacktestThread(QThread):
         super(QThread, self).__init__()
         self.wait_seconds = wait_seconds
         self.stock_symbols = stock_symbols
-        self.env =  models.FinanceEnv(df, trade_symbol, features=features, window=10, lags=lags, data_preparing_func=data.prepare_RSMV_data, min_performance=0.0, start=0, end=None)
+        self.env =  models.FinanceEnv(df, trade_symbol, features=features, lags=lags, data_preparing_func=data.prepare_stock_data, min_performance=0.0, start=0, end=None)
         self.stopped = False
 
     def stop_trade(self):

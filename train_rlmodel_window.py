@@ -74,10 +74,10 @@ class TrainRLModelWindow(QDialog):
         days = int(self.train_days_input.text().strip())
         interval = self.train_interval_input.text().strip()
         target = symbol+'_Price'
-        features = [target, 'r', 's', 'm', 'v']
-        
+        features = data.stock_data_columns()
+        features.append(target)
         df = data.create_dataset([symbol], start=data.today_before(days), end=data.today(), interval=interval)
-        learn_env = environment.FinanceEnv(df, target, features, window=20, lags=lags, data_preparing_func=data.prepare_RSMV_data, min_performance=0.9)
+        learn_env = environment.FinanceEnv(df, target, features, lags=lags, data_preparing_func=data.prepare_stock_data, min_performance=0.9)
         models.set_seeds(100)
         self.is_learning = True
         self.agent = models.DQNAgent(learn_env, max_steps=len(df), batch_size=128)
