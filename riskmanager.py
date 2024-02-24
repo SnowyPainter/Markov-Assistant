@@ -121,7 +121,7 @@ class RiskManager():
                             tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
                         infos.append(tpinfo)
                         self.position = 0
-                    elif loss <= -0.5:
+                    elif loss <= -self.sl:
                         tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
                         tpinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
                         infos.append(tpinfo)
@@ -175,10 +175,10 @@ class MonitorStock:
                 ti = tradeinfo.buy(price)
             elif self.position == 1 and position == -1:
                 loss = (price - self.entry_price) / self.entry_price
-                if loss > 0.0025:
+                if loss >= 0.0025:
                     ti = tradeinfo.sell(price)    
                     ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)
-                else:
+                elif loss < -0.01:
                     ti = tradeinfo.sell(price)
                     ti.set_info_type(tradeinfo.InfoType.STOPLOSS)
                 self.position = -1
