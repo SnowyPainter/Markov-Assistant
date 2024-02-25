@@ -140,6 +140,8 @@ def calculate_rsi(prices, period=14):
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
     rs = gain / loss
+    if len(rs) == 0 or len(rs) > 0 and np.isnan(rs.iloc[-1]):
+        return 50
     return 100 - (100 / (1 + rs))
 
 def stock_data_columns():
@@ -153,7 +155,6 @@ def prepare_stock_data(df, target):
         "rsi":calculate_rsi(df[target]),
         "r":np.log(df[target] / df[target].shift(1))
     })
-    print(new)
     new.dropna(inplace=True)
     
     new_ = (new - new.mean()) / new.std()
