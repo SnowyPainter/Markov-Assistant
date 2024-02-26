@@ -170,9 +170,11 @@ class MonitorStock:
                 action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(self._reshape(state), verbose=0)[0, 0])
                 if action == 0:
                     entry = price
+                    units += 1
                     ti.set_trade_type(tradeinfo.TradeType.BUY)
                 elif action == 1 and units > 0:
                     loss = (price - entry) / entry
+                    units -= 1
                     ti.set_trade_type(tradeinfo.TradeType.SELL)
                     if loss > 0.0025:
                         ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)

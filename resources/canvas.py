@@ -82,6 +82,9 @@ class PlotCanvas(FigureCanvas):
         self.axes.autoscale_view()
 
         self.draw()
+    
+    def plot_a_point(self, x, y, marker):
+        self.axes.plot(x, y, marker)
         
     def add_text_at_value(self, text, x, y=0, color="black"):
         self.axes.annotate(text, xy=(x, y), xytext=(x, y-3),ha='center', va='top', arrowprops=dict(facecolor=color, shrink=0.05))

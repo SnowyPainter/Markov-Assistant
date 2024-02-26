@@ -138,13 +138,13 @@ class TradeWindow(QDialog):
         elif trade_type != tradeinfo.TradeType.NONE:
             if trade_type == tradeinfo.TradeType.BUY:
                 t = "Buy"
-                self.canvas.canvas.add_text_at_value("Buy", date, price, color="green")    
+                self.canvas.canvas.plot_a_point(date, price, "go")    
             elif trade_type == tradeinfo.TradeType.SELL:
                 if info.info_type == tradeinfo.InfoType.TAKEPROFIT:
                     t = "Sell - Take Profit"
                 elif info.info_type == tradeinfo.InfoType.STOPLOSS:
                     t = "Sell - Stop Loss"
-                self.canvas.canvas.add_text_at_value("Sell", date, price, color="red")
+                self.canvas.canvas.plot_a_point(date, price, "ro")
         
         self.price_list.addItem(f"{t} / {price}")
     def monitor_stoploss_thread_handler(self, info):
