@@ -189,19 +189,17 @@ class StockMarketEnvironment:
         #trade rewarding
         if acts[Agent.SIDEWAY] == 1:
             d = self.df['d'].iloc[self.bar]
+            price = self.df_[self.target].iloc[self.bar]
             trade_reward = 1 if acts[Agent.TRADE] == d else 0
 
             sma = self.df_['sma'].iloc[self.bar]
             ema = self.df_['ema'].iloc[self.bar]
             rsi = self.df_['rsi'].iloc[self.bar]
-            if self.df_[self.target].iloc[self.bar] > sma:
+            if price > sma or price > ema:
                 trade_reward += 1
             else:
                 trade_reward -= 1
-            if self.df_[self.target].iloc[self.bar] > ema:
-                trade_reward += 1
-            else:
-                trade_reward -= 1
+                
             if rsi > 70 or rsi < 30:
                 trade_reward -= 1
 

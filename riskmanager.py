@@ -167,7 +167,7 @@ class MonitorStock:
             
             trading = True if np.argmax(self.env.agents[environment.Agent.SIDEWAY].predict(self._reshape(state), verbose=0)[0, 0]) == 1 else False
             if trading:
-                action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(state, verbose=0)[0, 0])
+                action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(self._reshape(state), verbose=0)[0, 0])
                 if action == 0:
                     entry = price
                     ti.set_trade_type(tradeinfo.TradeType.BUY)
