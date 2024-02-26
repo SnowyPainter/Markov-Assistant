@@ -486,8 +486,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
         self.backtest_plot.canvas.destroy_prev = False
         self.backtest_trade_status_label.setText("TRADE STATUS")
-        
-        env = environment.StockMarketEnvironment(self.trade_sideway_model, self.trade_model, df, target, lags=lags)
+        agents = [self.trade_sideway_model, self.trade_model]
+        env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         self.btt = QTBacktest.BacktestThread(symbol, env, 1)
         self.btt.signal.connect(self.handle_backtest_result)
         self.btt.set_backtest_strategy(amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate), guarantee=guarantee)

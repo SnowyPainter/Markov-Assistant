@@ -26,33 +26,31 @@ class StockMarketLearningThread(QThread):
         self.batch_size = batch_size
 
     def run(self):
-        state_size = self.env.trade_agent.state_size
-        n_features = self.env.trade_agent.n_features
+        state_size = self.env.agents[environment.Agent.TRADE].state_size
+        n_features = self.env.agents[environment.Agent.TRADE].n_features
         for e in range(self.episodes):
-            sideway_state, trade_state = self.env.reset()
-            sideway_state = np.reshape(sideway_state, [1,  state_size, n_features])
-            trade_state = np.reshape(trade_state, [1, state_size, n_features])
+            states = self.env.reset()
+            for i in range(0, len(states)):
+                states[i] = np.reshape(states[0], [1,  state_size, n_features])
             
             for _ in range(10000):
-                sideway_act = self.env.sideway_agent.act(sideway_state)
-                trade_act = self.env.trade_agent.act(trade_state)
-                next_sideway_state, next_trade_state, sideway_reward, trade_reward, done, info = self.env.step(sideway_act, trade_act)
+                sideway_act = self.env.agents[environment.Agent.SIDEWAY].act(states[environment.Agent.SIDEWAY])
+                trade_act = self.env.agents[environment.Agent.TRADE].act(states[environment.Agent.TRADE])
+                next_states, rewards, done, info = self.env.step([sideway_act, trade_act])
+                for i in range(0, len(next_states)):
+                    next_states[i] = np.reshape(next_states[i], [1, state_size, n_features])
                 
-                next_sideway_state = np.reshape(next_sideway_state, [1, state_size, n_features])
-                next_trade_state = np.reshape(next_trade_state, [1, state_size, n_features])
+                self.env.sideway_agent.remember(states[environment.Agent.SIDEWAY], sideway_act, rewards[environment.Agent.SIDEWAY], next_states[environment.Agent.SIDEWAY], done)
+                self.env.trade_agent.remember(states[environment.Agent.TRADE], trade_act, rewards[environment.Agent.TRADE], next_states[environment.Agent.TRADE], done)
                 
-                self.env.sideway_agent.remember(sideway_state, sideway_act, sideway_reward, next_sideway_state, done)
-                self.env.trade_agent.remember(trade_state, trade_act, trade_reward, next_trade_state, done)
-                
-                sideway_state = next_sideway_state
-                trade_state = next_trade_state
+                for i in range(0, len(next_states)):
+                    states[i] = next_states[i]
                 
                 if done:
                     self.update_signal.emit(models.EpisodeData(e+1, performance=self.env.performance))
                     break
-                
-            if len(self.env.sideway_agent.memory) > self.batch_size:
-                self.env.sideway_agent.replay(self.batch_size)
-            if len(self.env.trade_agent.memory) > self.batch_size:
-                self.env.trade_agent.replay(self.batch_size)
+            
+            for i in range(0, len(self.env.agents)):
+                if len(self.env.agents[i].memory) > self.batch_size:
+                    self.env.agents[i].replay(self.batch_size)
         self.update_signal.emit(models.EpisodeData(episode=-1))

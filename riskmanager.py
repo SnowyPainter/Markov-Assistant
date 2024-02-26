@@ -1,5 +1,5 @@
 import numpy as np
-import tradeinfo
+import tradeinfo, environment
 import datetime
 
 class RiskManager():
@@ -102,9 +102,9 @@ class RiskManager():
 
                 state = self.env.get_state(bar)
                 state = self._reshape(state)
-                trading = True if np.argmax(self.env.sideway_agent.predict(state, verbose=0)[0, 0]) == 1 else False
+                trading = True if np.argmax(self.env.agents[environment.Agent.SIDEWAY].predict(state, verbose=0)[0, 0]) == 1 else False
                 if trading:
-                    action = np.argmax(self.env.trade_agent.predict(state, verbose=0)[0, 0])
+                    action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(state, verbose=0)[0, 0])
                     if action == 0:
                         info = self.place_buy_order(bar, self.current_balance)
                         infos.append(info)
@@ -165,9 +165,9 @@ class MonitorStock:
             ti = tradeinfo.none()
             ti.set_price(price)
             
-            trading = True if np.argmax(self.env.sideway_agent.predict(self._reshape(state), verbose=0)[0, 0]) == 1 else False
+            trading = True if np.argmax(self.env.agents[environment.Agent.SIDEWAY].predict(self._reshape(state), verbose=0)[0, 0]) == 1 else False
             if trading:
-                action = np.argmax(self.env.trade_agent.predict(state, verbose=0)[0, 0])
+                action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(state, verbose=0)[0, 0])
                 if action == 0:
                     entry = price
                     ti.set_trade_type(tradeinfo.TradeType.BUY)

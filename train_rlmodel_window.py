@@ -89,7 +89,8 @@ class TrainRLModelWindow(QDialog):
         df = data.create_dataset([symbol], start=data.today_before(days), end=data.today(), interval=interval)
         sideway_agent = models.DQNMulti(lags, 2, len(features)) # 0:hold, 1:trade
         trade_agent = models.DQNMulti(lags, 2, len(features)) # 0:buy 1:sell
-        self.stock_market_env = environment.StockMarketEnvironment(sideway_agent, trade_agent, df, target, lags=lags)
+        agents = [sideway_agent, trade_agent]
+        self.stock_market_env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         models.set_seeds(100)
         self.is_learning = True

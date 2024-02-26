@@ -176,7 +176,8 @@ class TradeWindow(QDialog):
         target = f"{self.symbol}_Price"
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
-        env = environment.StockMarketEnvironment(self.trade_sideway_model, self.trade_model, df, target, lags=lags)
+        agents = [self.trade_sideway_model, self.trade_model]
+        env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True
         self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, env, interval)

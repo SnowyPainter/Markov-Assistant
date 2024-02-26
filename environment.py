@@ -3,6 +3,7 @@ import numpy as np
 import random
 import math
 import pandas as pd
+from enum import IntEnum
 import data, models
 
 def set_seeds(seed=100):
@@ -146,11 +147,15 @@ class StoplossEnv:
         self.prev_price = current_price
         state = self._get_state()
         return state.values, reward, done, {}
+
+
+class Agent(IntEnum):
+    SIDEWAY = 0
+    TRADE = 1
     
 class StockMarketEnvironment:
-    def __init__(self, sideway_agent, trade_agent, df, target, window=20, lags=3):
-        self.sideway_agent = sideway_agent
-        self.trade_agent = trade_agent
+    def __init__(self, agents, df, target, window=20, lags=3):
+        self.agents = agents
         self.target = target
         self.bar = 0 
         self.min_performance = 0.75
@@ -158,7 +163,6 @@ class StockMarketEnvironment:
         self.window = window
         self._prepare_data = data.prepare_stock_data
         self.raw = df
-        self.raw.set_index('Datetime', inplace=True)
         self.df, self.df_, self.features = self._prepare_data(df, target)
         self.n_features = len(self.features)
     
@@ -176,18 +180,18 @@ class StockMarketEnvironment:
         self.performance = 1
         self.bar = self.lags
         state = self.df_.iloc[self.bar - self.lags:self.bar]
-        return state.values, state.values
+        return [state.values, state.values]
 
-    def step(self, sideway_act, trade_act):
+    def step(self, acts):
         #sideway trading/holding rewarding
         volatility = np.std(self.df_[self.target][self.bar:self.bar + self.window])
         sideway_reward = 0 if volatility <= 0.07 else 1
         
         #trade rewarding
         r = self.df_['r'].iloc[self.bar]
-        if sideway_act == 1:
+        if acts[Agent.SIDEWAY] == 1:
             d = self.df['d'].iloc[self.bar]
-            trade_reward = 1 if trade_act == d else 0
+            trade_reward = 1 if acts[Agent.TRADE] == d else 0
             penalty = abs(r) if d else -abs(r)
             sma = self.df_['sma'].iloc[self.bar]
             ema = self.df_['ema'].iloc[self.bar]
@@ -219,4 +223,4 @@ class StockMarketEnvironment:
         
         sideway_state = self._get_state()
         trade_state = self._get_state()
-        return sideway_state, trade_state, sideway_reward, trade_reward, done, info
+        return [sideway_state, trade_state], [sideway_reward, trade_reward], done, info
