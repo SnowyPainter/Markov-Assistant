@@ -18,6 +18,8 @@ class QTMonitorStockThread(QThread):
     
     def stop(self):
         self.monitor.stop_monitor()
+        self.quit()
+        self.wait(500)
     
     def run(self):
         self.monitor = riskmanager.MonitorStock(self.env)

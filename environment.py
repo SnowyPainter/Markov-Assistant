@@ -177,7 +177,6 @@ class StockMarketEnvironment:
 
     def reset(self):
         self.total_reward = 0
-        self.performance = 1
         self.bar = self.lags
         state = self.df_.iloc[self.bar - self.lags:self.bar]
         return [state.values, state.values]
@@ -188,11 +187,10 @@ class StockMarketEnvironment:
         sideway_reward = 0 if volatility <= 0.07 else 1
         
         #trade rewarding
-        r = self.df_['r'].iloc[self.bar]
         if acts[Agent.SIDEWAY] == 1:
             d = self.df['d'].iloc[self.bar]
             trade_reward = 1 if acts[Agent.TRADE] == d else 0
-            penalty = abs(r) if d else -abs(r)
+
             sma = self.df_['sma'].iloc[self.bar]
             ema = self.df_['ema'].iloc[self.bar]
             rsi = self.df_['rsi'].iloc[self.bar]
@@ -206,16 +204,14 @@ class StockMarketEnvironment:
                 trade_reward -= 1
             if rsi > 70 or rsi < 30:
                 trade_reward -= 1
-            
-            self.performance *= math.exp(penalty)
-            
+
         else:
             trade_reward = 0
-            
+        
+        self.total_reward += trade_reward + sideway_reward
+        
         self.bar += 1        
         if self.bar >= len(self.df_):
-            done = True
-        elif (self.performance < self.min_performance and self.bar > self.lags + 15):
             done = True
         else:
             done = False

@@ -44,7 +44,7 @@ class StockMarketLearningThread(QThread):
                     states[i] = next_states[i]
                 
                 if done:
-                    self.update_signal.emit(models.EpisodeData(e+1, performance=self.env.performance))
+                    self.update_signal.emit(models.EpisodeData(e+1, treward=self.env.total_reward))
                     break
             
             for i in range(0, len(self.env.agents)):

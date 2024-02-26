@@ -40,7 +40,7 @@ class TrainRLModelWindow(QDialog):
         form_layout.addRow(train_interval_label, self.train_interval_input)
         
         self.performance_plot = canvas.RealTimePlot()
-        self.performance_plot.canvas.set_title("Performance chart")
+        self.performance_plot.canvas.set_title("Total Reward chart")
         
         self.plot_layout = QHBoxLayout()
         self.plot_layout.addWidget(self.performance_plot)
@@ -73,8 +73,7 @@ class TrainRLModelWindow(QDialog):
                     QMessageBox.information(self, "Existing Folder", f"{symbol} RL model folder is existing.")
                     return
                 os.makedirs(new_dir_path)
-                self.trade_file_name = os.path.join(new_dir_path, f"trade.keras")
-                self.sideway_file_name = os.path.join(new_dir_path, f"sideway.keras")
+                self.model_paths = [os.path.join(new_dir_path, f"sideway.keras"), os.path.join(new_dir_path, f"trade.keras")]
             except Exception as e:
                 QMessageBox.critical(None, "Error", f"Error while system create a directory: {str(e)}", QMessageBox.Ok)
         else:
@@ -102,9 +101,10 @@ class TrainRLModelWindow(QDialog):
         if episode_data.episode == -1: #end
             self.learn_button.setText("Learn")
             self.is_learning = False
-            self.stock_market_env.trade_agent.model.save(self.trade_file_name)
-            self.stock_market_env.sideway_agent.model.save(self.sideway_file_name)
+            for i in range(0, len(self.stock_market_env.agents)):
+                self.stock_market_env.agents[i].model.save(self.model_paths[i])
+                
             QMessageBox.information(self, "Learning finished!", "Your model finished learning.")
         else:
             self.learn_button.setText(f"Learning {episode_data.episode}")     
-            self.performance_plot.update_plot(episode_data.episode, episode_data.performance)
+            self.performance_plot.update_plot(episode_data.episode, episode_data.treward)

@@ -13,7 +13,12 @@ class TradeWindow(QDialog):
         self.log_file = ""
         self.trading = False
         self.center()
-        
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        if self.trading:
+            self.montior_thread.stop()
+        self.trading = False
+        a0.accept()
+    
     def initUI(self, symbol=""):
         self.symbol = symbol.upper()
         self.setWindowTitle(f"Trade {self.symbol}")
@@ -151,12 +156,13 @@ class TradeWindow(QDialog):
     def strat_trade_btn_clicked(self):
         folder_path = QFileDialog.getExistingDirectory(None, "Folder For New Model", "", QFileDialog.ShowDirsOnly)
         if folder_path:
-            self.backtest_trade_model_path = os.path.join(folder_path, f"trade.keras")
-            self.backtest_sideway_model_path = os.path.join(folder_path, f"sideway.keras")
+            self.model_paths = [os.path.join(folder_path, f"sideway.keras"), os.path.join(folder_path, f"trade.keras")]
         else:
             return
-        self.trade_model = keras.models.load_model(self.backtest_trade_model_path)
-        self.trade_sideway_model = keras.models.load_model(self.backtest_sideway_model_path)
+        for i in range(0, len(self.model_paths)):
+            if not os.path.exists(self.model_paths[i]):
+                QMessageBox.information(self, "Error", "Select your agent please.")
+                return
         
         self.canvas.clear()
         self.canvas.canvas.set_major_formatter("%H:%M:%S")
@@ -169,14 +175,13 @@ class TradeWindow(QDialog):
             return
         lags = int(str_lags)
         interval = int(str_update_interval)
-        if not os.path.exists(self.backtest_trade_model_path) or not os.path.exists(self.backtest_sideway_model_path):
-            QMessageBox.information(self, "Error", "Select your agent please.")
-            return
-        
         target = f"{self.symbol}_Price"
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
-        agents = [self.trade_sideway_model, self.trade_model]
+        
+        agents = []
+        for i in range(0, len(self.model_paths)):
+            agents.append(keras.models.load_model(self.model_paths[i]))
         env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True

@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import QTMonitorStock, QTMonitorStoploss
-from placeorder_window import *
 import datetime, os
 import models, resources.canvas as canvas, tradeinfo, logger
 from train_stoploss_model_window import *
