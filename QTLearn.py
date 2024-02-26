@@ -34,16 +34,13 @@ class StockMarketLearningThread(QThread):
                 states[i] = np.reshape(states[0], [1,  state_size, n_features])
             
             for _ in range(10000):
-                sideway_act = self.env.agents[environment.Agent.SIDEWAY].act(states[environment.Agent.SIDEWAY])
-                trade_act = self.env.agents[environment.Agent.TRADE].act(states[environment.Agent.TRADE])
-                next_states, rewards, done, info = self.env.step([sideway_act, trade_act])
+                acts = []
+                for i in range(0, len(self.env.agents)):
+                    acts.append(self.env.agents[i].act(states[i]))
+                next_states, rewards, done, info = self.env.step(acts)
                 for i in range(0, len(next_states)):
                     next_states[i] = np.reshape(next_states[i], [1, state_size, n_features])
-                
-                self.env.sideway_agent.remember(states[environment.Agent.SIDEWAY], sideway_act, rewards[environment.Agent.SIDEWAY], next_states[environment.Agent.SIDEWAY], done)
-                self.env.trade_agent.remember(states[environment.Agent.TRADE], trade_act, rewards[environment.Agent.TRADE], next_states[environment.Agent.TRADE], done)
-                
-                for i in range(0, len(next_states)):
+                    self.env.agents[i].remember(states[i], acts[i], rewards[i], next_states[i], done)
                     states[i] = next_states[i]
                 
                 if done:
