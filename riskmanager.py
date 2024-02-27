@@ -1,6 +1,6 @@
 import numpy as np
 import tradeinfo, environment
-import datetime
+import datetime, time
 
 class RiskManager():
     def _reshape(self, state):
@@ -155,10 +155,18 @@ class MonitorStock:
         self.bar = self.env.lags
         entry = 0
         units = 0
+        
+        sec1_timer = time.time()
+        
         while not self.stop:
-            if self.bar >= len(self.env.df_) or len(self.env.df_) < self.env.lags:
+            sec1_timer_curr = time.time()
+
+            if sec1_timer_curr - sec1_timer >= 1:
+                sec1_timer = sec1_timer_curr
                 yield tradeinfo.wait_for_data()
+            if self.bar >= len(self.env.df_) or len(self.env.df_) < self.env.lags:
                 continue
+
             date, price = self.get_date_price(self.bar)
             state = self.env.get_state(self.bar)
 

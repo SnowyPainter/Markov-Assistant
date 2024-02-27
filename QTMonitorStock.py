@@ -3,6 +3,7 @@ import environment
 import riskmanager
 import tradeinfo
 import pandas as pd
+import time
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
@@ -22,9 +23,14 @@ class QTMonitorStockThread(QThread):
         self.wait(500)
     
     def run(self):
+        timer = time.time()
         self.monitor = riskmanager.MonitorStock(self.env)
         for info in self.monitor.monitor():
+            timer_curr = time.time()
             if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
                 self.monitor.env.append_raw(data.create_realtime_dataset([self.symbol]))
-            self.msleep(int(self.interval_sec * 1000))
-            self.signal.emit(info)
+            
+            if timer_curr - timer >= int(self.interval_sec):
+                self.signal.emit(info)
+                timer = timer_curr
+                print("emit")
