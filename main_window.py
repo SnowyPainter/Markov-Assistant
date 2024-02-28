@@ -341,7 +341,7 @@ class MyApp(QMainWindow, window_handler.Handler):
             return
         
         window = TradeWindow()
-        window.initUI(self.selected_stock)
+        window.initUI(self.selected_stock, self.portfolio[self.selected_stock]['timezone'])
         self.windows.append(window)
         window.showMaximized()
         
@@ -501,7 +501,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_trade_status_label.setText("TRADE STATUS")
         agents = [self.trade_sideway_model, self.trade_model]
         env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
-        self.btt = QTBacktest.BacktestThread(symbol, env, 1)
+        self.btt = QTBacktest.BacktestThread(symbol, env, 1, tz)
         self.btt.signal.connect(self.handle_backtest_result)
         self.btt.set_backtest_strategy(amount, sl=sl, tsl=tsl, tp=tp, fee=fee, continue_to_realtime=(not self.backtest_simulate), guarantee=guarantee)
         self.backtesting = True

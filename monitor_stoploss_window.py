@@ -13,8 +13,9 @@ class MonitorStoplossWindow(QWidget):
         self.windows = []
         self.stoploss_model_path = ""
         
-    def initUI(self, init_symbol=""):
+    def initUI(self, init_symbol="", tz='America/New_York'):
         self.setWindowTitle("Monitor Stoploss")
+        self.tz = tz
         val_int = QIntValidator()
         base_layout = QHBoxLayout()
         self.prev_price_list = QListWidget()
@@ -88,7 +89,7 @@ class MonitorStoplossWindow(QWidget):
             return
         self.stoploss_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
-        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, symbol, lags, wait_interval)
+        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, symbol, lags, wait_interval, self.tz)
         self.monitor_stoploss_thread.signal.connect(self.monitor_stoploss_thread_handler)
         self.monitor_stoploss_thread.start()
         

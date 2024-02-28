@@ -19,8 +19,9 @@ class TradeWindow(QDialog):
         self.trading = False
         a0.accept()
     
-    def initUI(self, symbol=""):
+    def initUI(self, symbol="", timezone='America/New_York'):
         self.symbol = symbol.upper()
+        self.timezone = timezone
         self.setWindowTitle(f"Trade {self.symbol}")
         layout = QHBoxLayout()
         canvas_layout = QVBoxLayout()
@@ -37,6 +38,8 @@ class TradeWindow(QDialog):
         self.update_interval_input = QLineEdit(self)
         self.start_trade_btn = QPushButton("Start Trade", self)
         self.stoploss_btn = QPushButton("Stoploss", self)
+        asking_price_list_label = QLabel("Asking Prices")
+        self.asking_price_list = QListWidget()
         self.price_list = QListWidget()
         price_label = QLabel("Price : ")
         self.price_input = QLineEdit(self)
@@ -59,6 +62,7 @@ class TradeWindow(QDialog):
         self.canvas.canvas.set_major_formatter("%H:%M:%S")
         self.canvas.canvas.destroy_prev = False
         self.canvas.canvas.set_title(f"{self.symbol}")
+        self.asking_price_list.itemClicked.connect(self.price_list_item_clicked)
         self.price_list.itemClicked.connect(self.price_list_item_clicked)
         self.buy_btn.clicked.connect(self.buy_btn_clicked)
         self.sell_btn.clicked.connect(self.sell_btn_clicked)
@@ -86,6 +90,8 @@ class TradeWindow(QDialog):
         order_btns_layout.addWidget(self.create_savepath_btn)
         order_btns_layout.addWidget(self.open_savepath_btn)
         order_btns_layout.addWidget(self.calculate_profit_btn)
+        order_layout.addWidget(asking_price_list_label)
+        order_layout.addWidget(self.asking_price_list)
         order_layout.addWidget(self.price_list)
         order_layout.addLayout(order_inputs_layout)
         order_layout.addLayout(order_btns_layout)
@@ -200,7 +206,7 @@ class TradeWindow(QDialog):
         self.env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True
-        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.env, interval)
+        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.env, interval, self.timezone)
         self.montior_thread.signal.connect(self.monitor_thread_result_handler)
         self.montior_thread.start()
     def stoploss_btn_clicked(self):
@@ -218,7 +224,7 @@ class TradeWindow(QDialog):
             return
         lags = int(str_lags)
         interval = int(str_update_interval)
-        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, self.symbol, lags, interval)
+        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, self.symbol, lags, interval, self.timezone)
         self.monitor_stoploss_thread.signal.connect(self.monitor_stoploss_thread_handler)
         self.monitor_stoploss_thread.start()
     

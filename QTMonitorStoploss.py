@@ -6,9 +6,10 @@ from PyQt5.QtCore import *
 
 class QTMonitorStockThread(QThread):
     signal = pyqtSignal(tradeinfo.TradeInfo)
-    def __init__(self, model_path, target_symbol, lags, wait_interval):
+    def __init__(self, model_path, target_symbol, lags, wait_interval, timezone):
         super(QThread, self).__init__()
         self.target_symbol = target_symbol
+        self.timezone = timezone
         self.model = keras.models.load_model(model_path)
         self.wait_interval = wait_interval
         column = target_symbol+"_Price"
@@ -20,7 +21,7 @@ class QTMonitorStockThread(QThread):
         self.monitor.stop_monitor()
     
     def run(self):
-        self.monitor = riskmanager.MonitorStoploss(self.env, self.model)
+        self.monitor = riskmanager.MonitorStoploss(self.env, self.model, self.timezone)
         for info in self.monitor.monitor():
             if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
                 self.monitor.env.append_raw(data.create_realtime_dataset([self.target_symbol]))

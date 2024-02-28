@@ -9,10 +9,11 @@ from PyQt5.QtCore import *
 
 class QTMonitorStockThread(QThread):
     signal = pyqtSignal(tradeinfo.TradeInfo)
-    def __init__(self, symbol, env, interval_sec):
+    def __init__(self, symbol, env, interval_sec, timezone):
         super(QThread, self).__init__()
         self.env = env
         self.symbol = symbol
+        self.timezone = timezone
         df = pd.DataFrame({env.target:[], 'Datetime':[]})
         df.set_index('Datetime', inplace=True)
         self.interval_sec = interval_sec
@@ -24,7 +25,7 @@ class QTMonitorStockThread(QThread):
     
     def run(self):
         timer = time.time()
-        self.monitor = riskmanager.MonitorStock(self.env)
+        self.monitor = riskmanager.MonitorStock(self.env, self.timezone)
         for info in self.monitor.monitor():
             timer_curr = time.time()
             if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:

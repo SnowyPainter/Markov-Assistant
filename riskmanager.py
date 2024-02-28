@@ -11,8 +11,9 @@ class RiskManager():
         self.min_price = price
         self.max_price = price
 
-    def __init__(self, env, amount, ptc, ftc, waiting=False):
+    def __init__(self, env, amount, ptc, ftc, timezone, waiting=False):
         self.env = env
+        self.timezone = timezone
         self.initial_amount = amount
         self.current_balance = amount
         self.ptc = ptc
@@ -130,7 +131,7 @@ class RiskManager():
                             slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
                             infos.append(slinfo)
                 else:
-                    holdinfo = tradeinfo.holding(price)
+                    holdinfo = tradeinfo.holding(price, self.timezone)
                     infos.append(holdinfo)
                 self.net_wealths.append([date, self.calculate_net_wealth(price)])
                 bar += 1
@@ -142,8 +143,9 @@ class RiskManager():
         yield self.close_out(bar)
         
 class MonitorStock:
-    def __init__(self, env):
+    def __init__(self, env, timezone):
         self.env = env
+        self.timezone = timezone
         self.stop = False
     def _reshape(self, state):
         return np.reshape(state, [1, self.env.lags, self.env.n_features])
@@ -169,14 +171,14 @@ class MonitorStock:
 
             if sec1_timer_curr - sec1_timer >= 1:
                 sec1_timer = sec1_timer_curr
-                yield tradeinfo.wait_for_data()
+                yield tradeinfo.wait_for_data(self.timezone)
             if self.bar >= len(self.env.df_) or len(self.env.df_) < self.env.lags:
                 continue
 
             date, price = self.get_date_price(self.bar)
             state = self.env.get_state(self.bar)
 
-            ti = tradeinfo.none()
+            ti = tradeinfo.none(self.timezone)
             ti.set_price(price)
             
             trading = True if np.argmax(self.env.agents[environment.Agent.SIDEWAY].predict(self._reshape(state), verbose=0)[0, 0]) == 1 else False
@@ -203,8 +205,9 @@ class MonitorStock:
             yield ti
             
 class MonitorStoploss:
-    def __init__(self, env, model):
+    def __init__(self, env, model, timezone):
         self.env = env
+        self.timezone = timezone
         self.model = model
         self.stop = False
     
@@ -217,20 +220,20 @@ class MonitorStoploss:
         lags = self.env.lags
         while not self.stop:
             if i >= len(self.env.data) - lags - 1:
-                yield tradeinfo.wait_for_data()
+                yield tradeinfo.wait_for_data(self.timezone)
             elif order == 0 and i < len(self.env.data) - lags - 1:
                 order = np.argmax(self.model.predict(np.array([self.env.data.iloc[i:i+lags]]), verbose=0))
                 if order == 1:
                     self.stop = True
                     break
-                ti = tradeinfo.none()
+                ti = tradeinfo.none(self.timezone)
                 ti.set_price(self.env.data.iloc[i])
                 yield ti
                 i += 1
         if order == 1:
-            yield tradeinfo.sell(self.env.data.iloc[i+lags])
+            yield tradeinfo.sell(self.env.data.iloc[i+lags], self.timezone)
         else:
-            ti = tradeinfo.none()
+            ti = tradeinfo.none(self.timezone)
             ti.set_price(self.env.data.iloc[i])
             yield ti
             
