@@ -132,7 +132,19 @@ class TradeWindow(QDialog):
         date = info.date
         price = info.price
         self.canvas.update_plot(date, price)
-        t = "*"
+        
+        window = 20
+        p = self.env.df[f"{self.symbol}_Price"]
+        if len(p) > window:
+            std_dev = 2 
+            sma = self.env.df['sma'].iloc[-1]
+            price_std = p.rolling(window=window).std().iloc[-1]
+            upperband = sma + std_dev * price_std
+            lowerband = sma - std_dev * price_std
+            self.canvas.canvas.add_sub_line_data(self.upper_band_line, date, upperband)
+            self.canvas.canvas.add_sub_line_data(self.lower_band_line, date, lowerband)
+        
+        t = "View"
         if info.info_type == tradeinfo.InfoType.HOLDING:
             t = "Hold"
         elif trade_type != tradeinfo.TradeType.NONE:
@@ -168,6 +180,9 @@ class TradeWindow(QDialog):
         self.canvas.canvas.set_major_formatter("%H:%M:%S")
         self.canvas.canvas.destroy_prev = False
         
+        self.upper_band_line = self.canvas.canvas.create_sub_line("--", "red")
+        self.lower_band_line = self.canvas.canvas.create_sub_line("--", "green")
+        
         str_lags = self.lags_input.text()
         str_update_interval = self.update_interval_input.text()
         if str_lags == "" or str_update_interval == "":
@@ -182,10 +197,10 @@ class TradeWindow(QDialog):
         agents = []
         for i in range(0, len(self.model_paths)):
             agents.append(keras.models.load_model(self.model_paths[i]))
-        env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
+        self.env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True
-        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, env, interval)
+        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.env, interval)
         self.montior_thread.signal.connect(self.monitor_thread_result_handler)
         self.montior_thread.start()
     def stoploss_btn_clicked(self):

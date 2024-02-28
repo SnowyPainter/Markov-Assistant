@@ -33,4 +33,3 @@ class QTMonitorStockThread(QThread):
             if timer_curr - timer >= int(self.interval_sec):
                 self.signal.emit(info)
                 timer = timer_curr
-                print("emit")

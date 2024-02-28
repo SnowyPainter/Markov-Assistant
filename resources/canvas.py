@@ -61,9 +61,14 @@ class PlotCanvas(FigureCanvas):
 
         self.x_data = []
         self.y_data = []
+        self.sub_x = []
+        self.sub_y = []
+        self.sub_lines = []
+        self.sub_linestyles = []
+        self.sub_colors = []
         self.destroy_prev = True
-        self.line, = self.axes.plot(self.x_data, self.y_data, marker='o')
-        
+        self.main_line, = self.axes.plot(self.x_data, self.y_data, marker='o')
+
     def set_major_formatter(self, dateformat):
         self.axes.xaxis.set_major_formatter(mdates.DateFormatter(dateformat))
     
@@ -76,13 +81,36 @@ class PlotCanvas(FigureCanvas):
         if len(self.x_data) > 10 and self.destroy_prev:
             self.x_data = self.x_data[-10:]
             self.y_data = self.y_data[-10:]
-        self.line.set_xdata(self.x_data)
-        self.line.set_ydata(self.y_data)
+        self.main_line.set_xdata(self.x_data)
+        self.main_line.set_ydata(self.y_data)
         self.axes.relim()
         self.axes.autoscale_view()
 
         self.draw()
     
+    def add_sub_line_data(self, index, x, y):
+        self.sub_x[index].append(x)
+        self.sub_y[index].append(y)
+        if len(self.sub_x[index]) > 10 and self.destroy_prev:
+            self.sub_x[index] = self.sub_x[index][-10:]
+            self.sub_y[index] = self.sub_y[index][-10:]
+        self.sub_lines[index].set_xdata(self.sub_x[index])
+        self.sub_lines[index].set_ydata(self.sub_y[index])
+        
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.draw()
+    
+    def create_sub_line(self, linestyle, color):
+        self.sub_x.append([])
+        self.sub_y.append([])
+        self.sub_linestyles.append(linestyle)
+        self.sub_colors.append(color)
+        index = len(self.sub_x) - 1
+        line, = self.axes.plot(self.sub_x[index], self.sub_y[index], linestyle=linestyle, color=color)
+        self.sub_lines.append(line)
+        return index
+        
     def plot_a_point(self, x, y, marker):
         self.axes.plot(x, y, marker)
         
@@ -96,6 +124,10 @@ class PlotCanvas(FigureCanvas):
         self.axes.clear()
         self.x_data = []
         self.y_data = []
-        self.line, = self.axes.plot(self.x_data, self.y_data, '-')
+        self.main_line, = self.axes.plot(self.x_data, self.y_data, '-')
+        for i in range(0, len(self.sub_x)):
+            self.sub_x[i] = []
+            self.sub_y[i] = []
+            line, = self.axes.plot(self.sub_x[i], self.sub_y[i], linestyle=self.sub_linestyles[i], color=self.sub_colors[i])
         self.draw()
-        
+        self.sub_lines = []
