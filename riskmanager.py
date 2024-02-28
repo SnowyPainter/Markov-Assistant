@@ -111,10 +111,7 @@ class RiskManager():
                             infos.append(info)
                     elif action == 1 and self.units > 0:
                         loss = (price - self.entry_price) / self.entry_price
-                        #if loss > self.ptc:
-                        #    tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
-                        #    tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
-                        #    infos.append(tpinfo)
+                        
                         if loss >= self.tp:
                             tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
                             if guarantee:
@@ -124,6 +121,10 @@ class RiskManager():
                             else:
                                 tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
                             infos.append(tpinfo)
+                        #elif loss > self.ptc:
+                        #    tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
+                        #    tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
+                        #    infos.append(tpinfo)
                         elif loss <= -self.sl:
                             slinfo = self.place_sell_order(bar, units=self.units, gprice=price)
                             slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
