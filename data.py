@@ -5,25 +5,18 @@ import pytz
 from datetime import datetime, timedelta, time
 import os
 
-def a2c_filename(fname):
-    dirname, filename = os.path.split(fname)
-    name, ext = os.path.splitext(filename)
-    actor_path = os.path.join(dirname, f'{name}_actor.keras')
-    critic_path = os.path.join(dirname, f'{name}_critic.keras')
-    return actor_path, critic_path
-
 def days_to_years(years):
     return 365.25 * years
 def days_to_months(months):
     return 30.44 * months
-def is_market_open():
-    return time(9, 30) < datetime.now(pytz.timezone('US/Eastern')).time() < time(16, 0)
-def today():
-    return datetime.now(pytz.timezone('US/Eastern'))
-def today_before(day):
-    return datetime.now(pytz.timezone('US/Eastern')) - timedelta(days=day)
-def date_day_range(start, end):
-    return [start + timedelta(days=i) for i in range((end - start).days + 1)]
+
+TIMEZONE_KRX = 'Asia/Seoul'
+TIMEZONE_NYSE = 'America/New_York'
+
+def today(tz = 'America/New_York'):
+    return datetime.now(pytz.timezone(tz))
+def today_before(day, tz = 'America/New_York'):
+    return datetime.now(pytz.timezone(tz)) - timedelta(days=day)
 
 def get_local_period_day_csv(filename):
     df = pd.read_csv(filename)
@@ -91,6 +84,9 @@ def split_train_test(df, target_feature, features, lags=0, split_ratio=0.8):
     train_ = (train - m) / std
     test_ = (test - m) / std
     return  train_[features], test_[features], train_['target'], test_['target']
+
+def create_info(symbol):
+    return yf.Ticker(symbol).info
 
 def create_dataset(symbols, start, end, interval):
     dfs = []

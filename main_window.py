@@ -292,14 +292,17 @@ class MyApp(QMainWindow, window_handler.Handler):
         QMessageBox.information(self, "Training finished", "Check the result to click 'Get information' Button")
     
     def add_stock_btn_clicked(self):
-        stock_name = self.portfolio_stock_add_input.text().strip()
-        df = data.create_dataset([stock_name], start=data.today_before(10), end=data.today(), interval='1d')
-        if self.handle_flaw_dataset(df) == -1:
-            self.portfolio_stock_add_input.setText("")
+        stock_name = self.portfolio_stock_add_input.text().strip().upper()
+        
+        info = data.create_info(stock_name)
+        if info['quoteType'] == 'NONE':
+            QMessageBox.warning(self, "Error", "Stock is not available.")
             return
+        
         if stock_name:
             if stock_name not in self.portfolio:
                 self.portfolio[stock_name] = {}
+                self.portfolio[stock_name]['timezone'] = info['timeZoneFullName']
                 self.portfolio_stock_list.addItem(stock_name)
                 self.save_portfolio()
             else:
@@ -355,6 +358,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         vol = portfolio.portfolio_volatility(portfolio.optimal_portfolio_weights(today, tomorrow, risk_free_rate=0.3), today, tomorrow)
         self.portfolio_evaluate_vol_label.setText(str(round(vol, 2)))
     def dnn_run_btn_clicked(self):
+        if self.selected_stock == "":
+            QMessageBox(self, "Error", "Select a stock to analyze.")
+        
         lags = int(self.dnn_lags_input.text())
         symbols = self._get_symbols(self.dnn_stocks_input.text())
         target = self.dnn_target_stock_input.text().strip()
@@ -363,7 +369,8 @@ class MyApp(QMainWindow, window_handler.Handler):
         if not target in symbols:
             self.show_error(f"Target({target}) must be in symbol list.")
             return
-        df = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3)), end=data.today(), interval='1d')
+        tz = self.portfolio[self.selected_stock]["timezone"]
+        df = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3), tz=tz), end=data.today(tz=tz), interval='1d')
         if self.handle_flaw_dataset(df) == -1:
             return
         
@@ -372,19 +379,19 @@ class MyApp(QMainWindow, window_handler.Handler):
         dnn = models.DNN(X_train, X_test, y_train, y_test, verbose=2)
         dnn.compile()
         history = dnn.fit(100, './models/dnn.keras', skip_if_exist=False)
-        df = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3)), end=data.today(), interval='1d')
+        df = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3), tz=tz), end=data.today(tz=tz), interval='1d')
         df = data.dnn_prepare_for_prediction_dataset(df, lags)
         self.dnn_train_result = models.TrainResult(history.history, dnn.predict(df))
         self.dnn_plot.plot_static_data(df.index, self.dnn_train_result.predictions, "Date", target)
-        if(self.selected_stock != ""):
-            self.portfolio[self.selected_stock]["dnn"] = {}
-            self.portfolio[self.selected_stock]["dnn"]["lags"] = lags
-            self.portfolio[self.selected_stock]["dnn"]['symbols'] = symbols
-            self.portfolio[self.selected_stock]["dnn"]['result'] = {
-                "date" : df.index[-1].strftime("%Y-%m-%d"),
-                "prediction" : float(self.dnn_train_result.predictions[-1][0])
-            }
-            self.save_portfolio()
+        
+        self.portfolio[self.selected_stock]["dnn"] = {}
+        self.portfolio[self.selected_stock]["dnn"]["lags"] = lags
+        self.portfolio[self.selected_stock]["dnn"]['symbols'] = symbols
+        self.portfolio[self.selected_stock]["dnn"]['result'] = {
+            "date" : df.index[-1].strftime("%Y-%m-%d"),
+            "prediction" : float(self.dnn_train_result.predictions[-1][0])
+        }
+        self.save_portfolio()
         
         self._show_finished_training_message()
         
@@ -398,16 +405,20 @@ class MyApp(QMainWindow, window_handler.Handler):
         sub.show()
         
     def lstm_run_btn_clicked(self):
+        if self.selected_stock == "":
+            QMessageBox(self, "Error", "Select a stock to analyze.")
+        tz = self.portfolio[self.selected_stock]["timezone"]
+        
         lags = int(self.lstm_lags_input.text())
         symbols = self._get_symbols(self.lstm_stocks_input.text())
         if self.handle_train_init_error(lags, symbols) == -1:
             return
-        train = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3)), end=data.today(), interval='1d')
+        train = data.create_dataset(symbols, start=data.today_before(data.days_to_years(3), tz), end=data.today(tz), interval='1d')
         if self.handle_flaw_dataset(train) == -1:
             return
 
         self.lstm_plot.clear_plot()
-        mo1_5m = data.create_dataset(symbols, start=data.today_before(data.days_to_months(1)), end=data.today(), interval='1d')
+        mo1_5m = data.create_dataset(symbols, start=data.today_before(data.days_to_months(1), tz), end=data.today(tz), interval='1d')
         train_values = data.lstm_prepare_dataset(train).values
         test = data.lstm_prepare_dataset(mo1_5m)
         test_values = test.values
@@ -417,15 +428,14 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.lstm_train_result = models.TrainResult(history.history, lstm.predict(test_values))
         self.lstm_plot.plot_static_data(test.index[lags:], self.lstm_train_result.predictions)
         
-        if(self.selected_stock != ""):
-            self.portfolio[self.selected_stock]["lstm"] = {}
-            self.portfolio[self.selected_stock]["lstm"]["lags"] = lags
-            self.portfolio[self.selected_stock]["lstm"]['symbols'] = symbols
-            self.portfolio[self.selected_stock]["lstm"]['result'] = {
-                "date" : test.index[-1].strftime("%Y-%m-%d %H:%M:%S"),
-                "prediction" : float(self.lstm_train_result.predictions[-1][0])
-            }
-            self.save_portfolio()
+        self.portfolio[self.selected_stock]["lstm"] = {}
+        self.portfolio[self.selected_stock]["lstm"]["lags"] = lags
+        self.portfolio[self.selected_stock]["lstm"]['symbols'] = symbols
+        self.portfolio[self.selected_stock]["lstm"]['result'] = {
+            "date" : test.index[-1].strftime("%Y-%m-%d %H:%M:%S"),
+            "prediction" : float(self.lstm_train_result.predictions[-1][0])
+        }
+        self.save_portfolio()
         self._show_finished_training_message()
     
     def lstm_get_result_btn_clicked(self):
@@ -445,8 +455,12 @@ class MyApp(QMainWindow, window_handler.Handler):
         QMessageBox.information(self, "Stop Trade", "Stopped Trading with realtime data.")
     
     def backtest_run_btn_clicked(self):
+        
         if self.backtesting or self.handle_model_path_error(self.backtest_trade_model_path) == -1 or self.handle_model_path_error(self.backtest_sideway_model_path) == -1:
             return
+        if self.selected_stock == "":
+            QMessageBox(self, "Error", "Select a stock to analyze.")
+        tz = self.portfolio[self.selected_stock]["timezone"]
         
         symbol = self.backtest_option_symbol_input.text().strip()
         amount = float(self.backtest_option_amount_input.text())
@@ -459,16 +473,15 @@ class MyApp(QMainWindow, window_handler.Handler):
         tp = float(self.backtest_tp_input.text())
         fee = float(self.bakctest_fee_input.text())
         
-        if(self.selected_stock != ""):
-            self.portfolio[self.selected_stock]["backtest"] = {}
-            self.portfolio[self.selected_stock]["backtest"]["amount"] = amount
-            self.portfolio[self.selected_stock]["backtest"]['guarantee'] = guarantee
-            self.portfolio[self.selected_stock]["backtest"]['lags'] = lags
-            self.portfolio[self.selected_stock]["backtest"]['sl'] = sl
-            self.portfolio[self.selected_stock]["backtest"]['tsl'] = tsl
-            self.portfolio[self.selected_stock]["backtest"]['tp'] = tp
-            self.portfolio[self.selected_stock]["backtest"]['fee'] = fee
-            self.save_portfolio()
+        self.portfolio[self.selected_stock]["backtest"] = {}
+        self.portfolio[self.selected_stock]["backtest"]["amount"] = amount
+        self.portfolio[self.selected_stock]["backtest"]['guarantee'] = guarantee
+        self.portfolio[self.selected_stock]["backtest"]['lags'] = lags
+        self.portfolio[self.selected_stock]["backtest"]['sl'] = sl
+        self.portfolio[self.selected_stock]["backtest"]['tsl'] = tsl
+        self.portfolio[self.selected_stock]["backtest"]['tp'] = tp
+        self.portfolio[self.selected_stock]["backtest"]['fee'] = fee
+        self.save_portfolio()
         
         sl = None if sl == 0.0 else sl
         tsl = None if tsl == 0.0 else tsl
@@ -479,7 +492,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         if self.backtest_simulate:
             daybefore = int(self.backtest_simulate_day_before_input.text())
             period = self.backtest_simulate_period_input.text()
-            df = data.create_dataset([symbol], start=data.today_before(daybefore), end=data.today(), interval=period)
+            df = data.create_dataset([symbol], start=data.today_before(daybefore, tz), end=data.today(tz), interval=period)
             if self.handle_flaw_dataset(df) == -1:
                 return
         self.backtest_plot.clear()
@@ -519,7 +532,7 @@ class MyApp(QMainWindow, window_handler.Handler):
             self.backtest_simulate = False
             self.backtest_simulate_day_before_input.setEnabled(False)
             self.backtest_simulate_period_input.setEnabled(False)
-
+    
     def realtime_stoploss_monitor_btn_clicked(self):
         window = MonitorStoplossWindow()
         window.initUI(self.selected_stock)
