@@ -107,9 +107,14 @@ class RiskManager():
                     action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(state, verbose=0)[0, 0])
                     if action == 0:
                         info = self.place_buy_order(bar, self.current_balance)
-                        infos.append(info)
-                    elif action == 1 and units > 0:
+                        if info.units > 0:
+                            infos.append(info)
+                    elif action == 1 and self.units > 0:
                         loss = (price - self.entry_price) / self.entry_price
+                        #if loss > self.ptc:
+                        #    tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
+                        #    tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
+                        #    infos.append(tpinfo)
                         if loss >= self.tp:
                             tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
                             if guarantee:
