@@ -194,9 +194,12 @@ class MonitorStock:
                     ti.set_trade_type(tradeinfo.TradeType.SELL)
                     if loss > 0.0025:
                         ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)
-                    else:
+                    elif loss < -0.02:
                         ti.set_info_type(tradeinfo.InfoType.STOPLOSS)
-                        
+                    else:
+                        ti.set_trade_type(tradeinfo.TradeType.NONE)
+                else:
+                    ti.set_info_type(tradeinfo.InfoType.NONE)
             else:
                 ti.set_trade_type(tradeinfo.TradeType.NONE)
                 ti.set_info_type(tradeinfo.InfoType.HOLDING)

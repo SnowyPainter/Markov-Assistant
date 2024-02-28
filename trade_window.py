@@ -40,7 +40,9 @@ class TradeWindow(QDialog):
         self.stoploss_btn = QPushButton("Stoploss", self)
         asking_price_list_label = QLabel("Asking Prices")
         self.asking_price_list = QListWidget()
+        self.asking_price_list.setAutoScroll(True)
         self.price_list = QListWidget()
+        self.price_list.setAutoScroll(True)
         price_label = QLabel("Price : ")
         self.price_input = QLineEdit(self)
         units_label = QLabel("Units : ")
@@ -135,6 +137,7 @@ class TradeWindow(QDialog):
         if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
             return
         trade_type = info.trade_type
+        info_type = info.info_type
         date = info.date
         price = info.price
         self.canvas.update_plot(date, price)
@@ -151,9 +154,9 @@ class TradeWindow(QDialog):
             self.canvas.canvas.add_sub_line_data(self.lower_band_line, date, lowerband)
         
         t = "View"
-        if info.info_type == tradeinfo.InfoType.HOLDING:
+        if info_type == tradeinfo.InfoType.HOLDING:
             t = "Hold"
-        elif trade_type != tradeinfo.TradeType.NONE:
+        elif trade_type != tradeinfo.TradeType.NONE and info_type != tradeinfo.InfoType.NONE:
             if trade_type == tradeinfo.TradeType.BUY:
                 t = "Buy"
                 self.canvas.canvas.plot_a_point(date, price, "go")    
