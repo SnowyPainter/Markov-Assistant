@@ -40,9 +40,8 @@ class TradeWindow(QDialog):
         self.stoploss_btn = QPushButton("Stoploss", self)
         asking_price_list_label = QLabel("Asking Prices")
         self.asking_price_list = QListWidget()
-        self.asking_price_list.setAutoScroll(True)
         self.price_list = QListWidget()
-        self.price_list.setAutoScroll(True)
+        
         price_label = QLabel("Price : ")
         self.price_input = QLineEdit(self)
         units_label = QLabel("Units : ")
@@ -101,7 +100,11 @@ class TradeWindow(QDialog):
         layout.addLayout(canvas_layout, stretch=3)
         layout.addLayout(order_layout, stretch=1)
         self.setLayout(layout)
-        
+    
+    def set_asking_price(self, buys, sells):
+        self.asking_price_list.clear()
+        #호가 설정
+    
     def center(self):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
@@ -156,7 +159,7 @@ class TradeWindow(QDialog):
         t = "View"
         if info_type == tradeinfo.InfoType.HOLDING:
             t = "Hold"
-        elif trade_type != tradeinfo.TradeType.NONE and info_type != tradeinfo.InfoType.NONE:
+        elif trade_type != tradeinfo.TradeType.NONE:
             if trade_type == tradeinfo.TradeType.BUY:
                 t = "Buy"
                 self.canvas.canvas.plot_a_point(date, price, "go")    
@@ -168,6 +171,7 @@ class TradeWindow(QDialog):
                 self.canvas.canvas.plot_a_point(date, price, "ro")
         
         self.price_list.addItem(f"{t} / {price}")
+        self.price_list.scrollToBottom()
     def monitor_stoploss_thread_handler(self, info):
         #date = info.date
         price = info.price
