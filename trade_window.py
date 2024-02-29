@@ -3,6 +3,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import os, datetime
 import QTMonitorStock, QTMonitorStoploss, tradeinfo
+from handlers.koreainvest import *
+from secret import keys
 import models, resources.canvas as canvas, data, QTLearn, environment, logger
 from tensorflow import keras
 import pandas as pd
@@ -22,6 +24,13 @@ class TradeWindow(QDialog):
     def initUI(self, symbol="", timezone='America/New_York'):
         self.symbol = symbol.upper()
         self.timezone = timezone
+        if self.timezone == data.TIMEZONE_NYSE:
+            exchange = "나스닥"
+        elif self.timezone == data.TIMEZONE_KRX:
+            exchange = "서울"
+        
+        self.broker = create_broker(keys.KEY, keys.APISECRET, keys.ACCOUNT_NO, exchange, True)
+        
         self.setWindowTitle(f"Trade {self.symbol}")
         layout = QHBoxLayout()
         canvas_layout = QVBoxLayout()
@@ -101,9 +110,19 @@ class TradeWindow(QDialog):
         layout.addLayout(order_layout, stretch=1)
         self.setLayout(layout)
     
-    def set_asking_price(self, buys, sells):
+    def set_asking_price(self, buys_p, sells_p, buys_n, sells_n, sum_of_buys, sum_of_sells):
         self.asking_price_list.clear()
-        #호가 설정
+        
+        self.asking_price_list.addItem(f"Sum of Selling Asking Price Amount : {sum_of_sells}")
+        i = len(sells_p)
+        for aps in sells_p[::-1]:
+            self.asking_price_list.addItem(f"Selling {i}, {sells_n[i]} : {aps}")
+            i -= 1
+        i = 1
+        for apb in buys_p:
+            self.asking_price_list.addItem(f"Buying {i}, {buys_n[i]} : {apb}")
+            i += 1
+        self.asking_price_list.addItem(f"Sum of Buying Asking Price Amount : {sum_of_buys}")
     
     def center(self):
         qr = self.frameGeometry()
@@ -133,45 +152,55 @@ class TradeWindow(QDialog):
     def buy_btn_clicked(self):
         self._log_trade("buy")
     def sell_btn_clicked(self):
-    
-    
         self._log_trade("sell")
+        
+    def draw_assistant_lines(self, df, date, window):
+        std_dev = 2 
+        p = df[f"{self.symbol}_Price"]
+        sma = df['sma'].iloc[-1]
+        price_std = p.rolling(window=window).std().iloc[-1]
+        upperband = sma + std_dev * price_std
+        lowerband = sma - std_dev * price_std
+        self.canvas.canvas.add_sub_line_data(self.upper_band_line, date, upperband)
+        self.canvas.canvas.add_sub_line_data(self.lower_band_line, date, lowerband)
+    
     def monitor_thread_result_handler(self, info):
         if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
             return
         trade_type = info.trade_type
         info_type = info.info_type
-        date = info.date
-        price = info.price
-        self.canvas.update_plot(date, price)
         
-        window = 20
-        p = self.env.df[f"{self.symbol}_Price"]
-        if len(p) > window:
-            std_dev = 2 
-            sma = self.env.df['sma'].iloc[-1]
-            price_std = p.rolling(window=window).std().iloc[-1]
-            upperband = sma + std_dev * price_std
-            lowerband = sma - std_dev * price_std
-            self.canvas.canvas.add_sub_line_data(self.upper_band_line, date, upperband)
-            self.canvas.canvas.add_sub_line_data(self.lower_band_line, date, lowerband)
-        
-        t = "View"
-        if info_type == tradeinfo.InfoType.HOLDING:
-            t = "Hold"
-        elif trade_type != tradeinfo.TradeType.NONE:
-            if trade_type == tradeinfo.TradeType.BUY:
-                t = "Buy"
-                self.canvas.canvas.plot_a_point(date, price, "go")    
-            elif trade_type == tradeinfo.TradeType.SELL:
-                if info.info_type == tradeinfo.InfoType.TAKEPROFIT:
-                    t = "Sell - Take Profit"
-                elif info.info_type == tradeinfo.InfoType.STOPLOSS:
-                    t = "Sell - Stop Loss"
-                self.canvas.canvas.plot_a_point(date, price, "ro")
-        
-        self.price_list.addItem(f"{t} / {price}")
-        self.price_list.scrollToBottom()
+        if info_type == tradeinfo.InfoType.ASKINGPRICE:
+            info = info.infos
+            self.set_asking_price(info["apb"], info["aps"], info["apb_n"], info["aps_n"], info["s_apb_n"], info["s_aps_n"])
+        elif info_type == tradeinfo.InfoType.SIGNED:
+            info = info.infos
+            QMessageBox.information(self, "Signed", f"Order no : {info['values'][2]}")
+        else:
+            date = info.date
+            price = info.price
+            self.canvas.update_plot(date, price)
+            window = 20
+            if len(self.env.df) > window:
+                self.draw_assistant_lines(self.env.df, date, window)
+            t = "View"
+            if info_type == tradeinfo.InfoType.HOLDING:
+                t = "Hold"
+            elif trade_type != tradeinfo.TradeType.NONE:
+                if trade_type == tradeinfo.TradeType.BUY:
+                    t = "Buy"
+                    self.canvas.canvas.plot_a_point(date, price, "go")
+                elif trade_type == tradeinfo.TradeType.SELL:
+                    if info.info_type == tradeinfo.InfoType.TAKEPROFIT:
+                        t = "Sell - Take Profit"
+                    elif info.info_type == tradeinfo.InfoType.STOPLOSS:
+                        t = "Sell - Stop Loss"
+                    if info.info_type == tradeinfo.InfoType.TAKEPROFIT or info.info_type == tradeinfo.InfoType.STOPLOSS:
+                        self.canvas.canvas.plot_a_point(date, price, "ro")
+                if t == "Buy" or "Sell" in t:
+                    self.price_list.addItem(f"{t} / {price}")
+                    self.price_list.scrollToBottom()
+
     def monitor_stoploss_thread_handler(self, info):
         #date = info.date
         price = info.price
@@ -213,7 +242,7 @@ class TradeWindow(QDialog):
         self.env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True
-        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.env, interval, self.timezone)
+        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.broker, self.env, interval, self.timezone)
         self.montior_thread.signal.connect(self.monitor_thread_result_handler)
         self.montior_thread.start()
     def stoploss_btn_clicked(self):

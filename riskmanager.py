@@ -141,7 +141,53 @@ class RiskManager():
         bar -= 1
 
         yield self.close_out(bar)
+
+class StatelessStockMonitor:
+    def __init__(self, env, timezone):
+        self.env = env
+        self.timezone = timezone
+        self.bar = 0
+    def _reshape(self, state):
+        return np.reshape(state, [1, self.env.lags, self.env.n_features])
+    
+    def get_price(self, bar):
+        return self.env.df[self.env.target].iloc[bar]
+    
+    def get_monitor(self, stoploss=-0.02, takeprofit=0.04):
+        if self.bar >= len(self.env.df):
+            return tradeinfo.wait_for_data()
         
+        price = self.get_price(self.bar)
+        state = self.env.get_state(self.bar)
+        ti = tradeinfo.none(self.timezone)
+        ti.set_price(price)
+        trading = True if np.argmax(self.env.agents[environment.Agent.SIDEWAY].predict(self._reshape(state), verbose=0)[0, 0]) == 1 else False
+        if trading:
+            action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(self._reshape(state), verbose=0)[0, 0])
+            if action == 0:
+                entry = price
+                units += 1
+                ti.set_trade_type(tradeinfo.TradeType.BUY)
+            elif action == 1 and units > 0:
+                loss = (price - entry) / entry
+                units -= 1
+                ti.set_trade_type(tradeinfo.TradeType.SELL)
+                if loss > takeprofit:
+                    ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)
+                elif loss < stoploss:
+                    ti.set_info_type(tradeinfo.InfoType.STOPLOSS)
+                else:
+                    ti.set_trade_type(tradeinfo.TradeType.NONE)
+                    ti.set_info_type(tradeinfo.InfoType.HOLDING)
+            else:
+                ti.set_info_type(tradeinfo.InfoType.NONE)
+        else:
+            ti.set_trade_type(tradeinfo.TradeType.NONE)
+            ti.set_info_type(tradeinfo.InfoType.HOLDING)
+            
+        self.bar += 1
+        return ti
+
 class MonitorStock:
     def __init__(self, env, timezone):
         self.env = env
@@ -207,6 +253,8 @@ class MonitorStock:
             self.bar += 1
             yield ti
             
+
+      
 class MonitorStoploss:
     def __init__(self, env, model, timezone):
         self.env = env

@@ -94,11 +94,18 @@ def create_dataset(symbols, start, end, interval):
         dfs.append(get_symbol_historical(symbol, start=start, end=end, period="max", interval=interval))
     return merge_dfs(dfs, on=dfs[0].index.name)
 
-def create_realtime_dataset(tickers):
+def create_realtime_dataset_by_price(symbol, price, tz=TIMEZONE_NYSE):
+    df = pd.DataFrame()
+    df[f"{symbol}_Price"] = [price]
+    df['Datetime'] = [pd.to_datetime(today(tz=tz), format="%Y-%m-%d %H:%M:%S%z")]
+    df.set_index('Datetime', inplace=True)
+    return df
+
+def create_realtime_dataset(tickers, tz=TIMEZONE_NYSE):
     df = pd.DataFrame()
     for ticker in tickers:
         df[ticker+'_Price'] = [get_realtime_price(ticker)]
-    df['Datetime'] = [pd.to_datetime(today(), format="%Y-%m-%d %H:%M:%S%z")]
+    df['Datetime'] = [pd.to_datetime(today(tz=tz), format="%Y-%m-%d %H:%M:%S%z")]
     df.set_index('Datetime', inplace=True)
     return df
 

@@ -1,30 +1,40 @@
 import data
-import environment
 import riskmanager
 import tradeinfo
 import pandas as pd
 import time
+import websockets
+import json
+import asyncio
+import time
+from secret import keys
+from handlers.koreainvest import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 class QTMonitorStockThread(QThread):
     signal = pyqtSignal(tradeinfo.TradeInfo)
-    def __init__(self, symbol, env, interval_sec, timezone):
+    def __init__(self, symbol, broker, env, interval_sec, timezone, stoploss=-0.02, takeprofit=0.04):
         super(QThread, self).__init__()
         self.env = env
+        self.broker = broker
         self.symbol = symbol
         self.timezone = timezone
-        df = pd.DataFrame({env.target:[], 'Datetime':[]})
-        df.set_index('Datetime', inplace=True)
+        self.stoploss = stoploss
+        self.takeprofit = takeprofit
+        #df = pd.DataFrame({env.target:[], 'Datetime':[]})
+        #df.set_index('Datetime', inplace=True)
         self.interval_sec = interval_sec
+        self.order_book = {}
+        self.units = 0
     
     def stop(self):
-        self.monitor.stop_monitor()
+        #self.monitor.stop_monitor()
         self.quit()
         self.wait(500)
     
     def run(self):
-        timer = time.time()
+        '''
         self.monitor = riskmanager.MonitorStock(self.env, self.timezone)
         for info in self.monitor.monitor():
             timer_curr = time.time()
@@ -34,3 +44,67 @@ class QTMonitorStockThread(QThread):
             if timer_curr - timer >= int(self.interval_sec):
                 self.signal.emit(info)
                 timer = timer_curr
+        '''
+        timer = time.time()
+        self.monitor = riskmanager.StatelessStockMonitor(self.env, self.timezone)
+        hts_id = keys.HTS_ID
+        if self.timezone == data.TIMEZONE_KRX:
+            actions = [[KOREA_ASKINGPRICE_ID, self.symbol], [KOREA_TRANSCATION_NOTICE_ID, hts_id]]
+        elif self.timezone == data.TIMEZONE_NYSE:
+            actions = [[NYSE_ASKINGPRICE_ID, get_tr_key_by_symbol(self.symbol)], [NYSE_TRANSCATION_NOTICE_ID, hts_id]]
+        approval_key = get_approval(keys.KEY, keys.APISECRET)
+        send_data_list = []
+        for action in actions:
+            send_data_list.append(create_websocket_data(approval_key, action[0], action[1]))
+        #url = 'ws://ops.koreainvestment.com:21000' # 실전투자계좌
+        url = 'ws://ops.koreainvestment.com:31000' # 모의투자계좌
+        with websockets.connect(url, ping_interval=None) as websocket:
+            for send_data in send_data_list:
+                websocket.send(send_data)
+                self.msleep(int(500))
+            while True:
+                timer_curr = time.time()
+                try:
+                    recvd = websocket.recv()
+                    result = handle_websocket_data(websocket, recvd)
+                    if result["error"] == -1:
+                        break
+                    if result["type"] == 0: #호가 처리
+                        print(result)
+                        df = data.create_realtime_dataset_by_price(self.symbol, result["predicted_price"], self.timezone)
+                        self.monitor.env.append_raw(df)
+                        self.signal.emit(tradeinfo.asking_price_info(result, self.timezone))
+                    elif result["type"] == 1: #체결 처리
+                        print(result)
+                        if result["signed"] == True:
+                            self.order_book[result["values"][2]]["signed"] = True
+                            self.units = self.order_book[result["values"][2]]["units"]
+                            
+                        self.signal.emit(tradeinfo.signed_info(result, self.timezone))
+                        
+                    if timer_curr - timer >= int(self.interval_sec):
+                        trade_info = self.monitor.get_monitor(self.stoploss, self.takeprofit)
+                        trade_type = trade_info.trade_type
+                        price = trade_info.price
+                        if self.timezone == data.TIMEZONE_KRX:
+                            price = get_price_to_asking_price(trade_info.price)
+                        current_deposit = get_deposit(get_balance(self.broker))
+                        affordable_units = int(current_deposit / price)
+                        if trade_type == tradeinfo.TradeType.BUY and affordable_units > 0:
+                            result = place_buy_order_limits(self.broker, self.symbol, price, affordable_units)
+                            self.order_book[result['output']['ODNO']] = {
+                                "signed":False,
+                                "units":affordable_units,
+                                "price":price
+                            }
+                        elif trade_type == tradeinfo.TradeType.SELL and self.units > 0:
+                            result = place_sell_order_limits(self.broker, self.symbol, price, self.units)
+                            self.order_book[result['output']['ODNO']] = {
+                                "signed":False,
+                                "units":self.units,
+                                "price":price
+                            }
+                        self.signal.emit(trade_info)
+                        timer = timer_curr
+                except websockets.ConnectionClosed:
+                    continue

@@ -9,6 +9,8 @@ class InfoType(IntEnum):
     NONE = 5
     WAITFORNEWDATA = 6
     HOLDING = 7
+    SIGNED = 8
+    ASKINGPRICE = 9
 class TradeType(IntEnum):
     BUY = 1
     SELL = 2
@@ -51,6 +53,18 @@ def sell(price, tz):
     ti.set_trade_type(TradeType.SELL)
     return ti
 
+def signed_info(result, tz):
+    ti = TradeInfo(data.today(tz))
+    ti.infos = result
+    ti.info_type = InfoType.SIGNED
+    return ti
+
+def asking_price_info(result, tz):
+    ti = TradeInfo(data.today(tz))
+    ti.infos = result
+    ti.info_type = InfoType.ASKINGPRICE
+    return ti
+
 class TradeInfo:
     def __init__(self, date):
         self.date = date
@@ -62,6 +76,7 @@ class TradeInfo:
         self.stoploss = -1
         self.price = -1
         self.performance = -1
+        self.infos = {}
         
     def set_stoploss(self, p, pos):
         self.info_type = InfoType.STOPLOSS
