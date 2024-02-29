@@ -130,14 +130,16 @@ class PlotCanvas(FigureCanvas):
                        self.axes.plot([x[-2], x[-1]], [c, c], color='red', linewidth=2)[0]]
         self.candlesticks.append(candlestick)
         self.candlestick_update_count = 0
-    def update_candlestick(self, x, prices):
+    def update_candlestick(self, x, prices, updating_limit):
         o = prices[0]
         h = max(prices)
         l = min(prices)
         c = prices[-1]
-        if self.candlestick_update_count >= 2: # Assumption to LAST UPDATE (3 ~ 4 is the updating last moment)
+        time_error = 2 #sec
+        if self.candlestick_update_count >= updating_limit-time_error: # Assumption to LAST UPDATE (1minuts => 56 is the updating last moment)
             if len(prices) == 1:
                 return
+        
         self.candlesticks[-1][0].set_data([[x[-2], x[-2]], [l, h]])
         self.candlesticks[-1][1].set_data([[x[-2], x[-1]], [o, o]])
         self.candlesticks[-1][2].set_data([[x[-2], x[-1]], [c, c]])

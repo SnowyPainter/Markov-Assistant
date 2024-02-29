@@ -15,7 +15,7 @@ class TradeWindow(QDialog):
         super(TradeWindow, self).__init__(None)
         self.log_file = ""
         self.trading = False
-        self.interval = 3
+        self.interval = 60 # 1min
         self.center()
     def closeEvent(self, a0: QCloseEvent) -> None:
         if self.trading:
@@ -183,7 +183,7 @@ class TradeWindow(QDialog):
             self.set_asking_price(info["apb"], info["aps"], info["apb_n"], info["aps_n"], info["s_apb_n"], info["s_aps_n"])
             self.candlechart_prices.append(info["predicted_price"])
             if len(self.canvas.canvas.candlesticks) > 0:
-                self.canvas.canvas.update_candlestick(self.candlechart_x, self.candlechart_prices)
+                self.canvas.canvas.update_candlestick(self.candlechart_x, self.candlechart_prices, self.interval)
             if self.create_new_candle:
                 self.canvas.canvas.add_candlestick(self.candlechart_x, self.candlechart_prices)
                 self.create_new_candle = False
