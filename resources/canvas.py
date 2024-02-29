@@ -59,6 +59,7 @@ class PlotCanvas(FigureCanvas):
         FigureCanvas.setSizePolicy(self, QSizePolicy.Minimum, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
+        self.candlesticks = []
         self.x_data = []
         self.y_data = []
         self.sub_x = []
@@ -85,7 +86,6 @@ class PlotCanvas(FigureCanvas):
         self.main_line.set_ydata(self.y_data)
         self.axes.relim()
         self.axes.autoscale_view()
-
         self.draw()
     
     def add_sub_line_data(self, index, x, y):
@@ -120,6 +120,32 @@ class PlotCanvas(FigureCanvas):
     def add_axhline_at_value(self, y, color="b", linestyle='--'):
         self.axes.axhline(y=y, color=color, linestyle=linestyle)
     
+    def add_candlestick(self, x, prices):
+        o = prices[0]
+        h = max(prices)
+        l = min(prices)
+        c = prices[-1]
+        candlestick = [self.axes.plot([x[-2], x[-2]], [l, h], color='black', linewidth=1)[0],
+                       self.axes.plot([x[-2], x[-1]], [o, o], color='green', linewidth=2)[0],
+                       self.axes.plot([x[-2], x[-1]], [c, c], color='red', linewidth=2)[0]]
+        self.candlesticks.append(candlestick)
+        self.candlestick_update_count = 0
+    def update_candlestick(self, x, prices):
+        o = prices[0]
+        h = max(prices)
+        l = min(prices)
+        c = prices[-1]
+        if self.candlestick_update_count >= 2: # Assumption to LAST UPDATE (3 ~ 4 is the updating last moment)
+            if len(prices) == 1:
+                return
+        self.candlesticks[-1][0].set_data([[x[-2], x[-2]], [l, h]])
+        self.candlesticks[-1][1].set_data([[x[-2], x[-1]], [o, o]])
+        self.candlesticks[-1][2].set_data([[x[-2], x[-1]], [c, c]])
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.draw()
+        self.candlestick_update_count += 1
+        
     def clear(self):
         self.axes.clear()
         self.x_data = []

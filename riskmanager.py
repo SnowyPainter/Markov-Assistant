@@ -214,13 +214,15 @@ class MonitorStock:
         
         while not self.stop:
             sec1_timer_curr = time.time()
-
+            infos = []
             if sec1_timer_curr - sec1_timer >= 1:
                 sec1_timer = sec1_timer_curr
-                yield tradeinfo.wait_for_data(self.timezone)
+                infos.append(tradeinfo.wait_for_data(self.timezone))
+                yield infos
+                continue
             if self.bar >= len(self.env.df_) or len(self.env.df_) < self.env.lags:
                 continue
-
+            
             date, price = self.get_date_price(self.bar)
             state = self.env.get_state(self.bar)
 
@@ -249,9 +251,9 @@ class MonitorStock:
             else:
                 ti.set_trade_type(tradeinfo.TradeType.NONE)
                 ti.set_info_type(tradeinfo.InfoType.HOLDING)
-            
+            infos.append(ti)
             self.bar += 1
-            yield ti
+            yield infos
             
 
       

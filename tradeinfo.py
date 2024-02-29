@@ -11,6 +11,7 @@ class InfoType(IntEnum):
     HOLDING = 7
     SIGNED = 8
     ASKINGPRICE = 9
+    TRADE = 10
 class TradeType(IntEnum):
     BUY = 1
     SELL = 2

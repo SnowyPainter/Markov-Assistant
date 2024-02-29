@@ -5,6 +5,7 @@ import os, datetime
 import QTMonitorStock, QTMonitorStoploss, tradeinfo
 from handlers.koreainvest import *
 from secret import keys
+import matplotlib.dates as mdates
 import models, resources.canvas as canvas, data, QTLearn, environment, logger
 from tensorflow import keras
 import pandas as pd
@@ -14,6 +15,7 @@ class TradeWindow(QDialog):
         super(TradeWindow, self).__init__(None)
         self.log_file = ""
         self.trading = False
+        self.interval = 3
         self.center()
     def closeEvent(self, a0: QCloseEvent) -> None:
         if self.trading:
@@ -179,12 +181,23 @@ class TradeWindow(QDialog):
         if info_type == tradeinfo.InfoType.ASKINGPRICE:
             info = info.infos
             self.set_asking_price(info["apb"], info["aps"], info["apb_n"], info["aps_n"], info["s_apb_n"], info["s_aps_n"])
+            self.candlechart_prices.append(info["predicted_price"])
+            if len(self.canvas.canvas.candlesticks) > 0:
+                self.canvas.canvas.update_candlestick(self.candlechart_x, self.candlechart_prices)
+            if self.create_new_candle:
+                self.canvas.canvas.add_candlestick(self.candlechart_x, self.candlechart_prices)
+                self.create_new_candle = False
+            
         elif info_type == tradeinfo.InfoType.SIGNED:
             info = info.infos
             QMessageBox.information(self, "Signed", f"Order no : {info['values'][2]}")
         else:
             date = info.date
             price = info.price
+            today = data.today(self.timezone)
+            self.candlechart_x = mdates.date2num([data.today_minus_seconds(today, self.interval), today])
+            self.candlechart_prices = []
+            self.create_new_candle = True
             self.canvas.update_plot(date, price)
             window = 20
             if len(self.env.df) > window:
@@ -246,8 +259,18 @@ class TradeWindow(QDialog):
         self.env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True
+        #FOR TESTING
+        #FOR TESTING
+        #FOR TESTING
         self.broker = ""
-        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.broker, self.env, 60, self.timezone)
+        #FOR TESTING
+        #FOR TESTING
+        #FOR TESTING
+        today = data.today(self.timezone)
+        self.create_new_candle = True
+        self.candlechart_x = mdates.date2num([data.today_minus_seconds(today, self.interval), today])
+        self.candlechart_prices = []
+        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.broker, self.env, self.interval, self.timezone)
         self.montior_thread.signal.connect(self.monitor_thread_result_handler)
         self.montior_thread.start()
     def stoploss_btn_clicked(self):

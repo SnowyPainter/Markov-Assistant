@@ -2,10 +2,7 @@ import data
 import riskmanager
 import tradeinfo
 import pandas as pd
-import time
-import websockets
-import json
-import asyncio
+import random
 import time
 from secret import keys
 from handlers.koreainvest import *
@@ -29,8 +26,11 @@ class QTMonitorStockThread(QThread):
         self.units = 0
     
     def stop(self):
-        #self.monitor.stop_monitor()
-        
+        #FOR TEST
+        #FOR TEST
+        self.monitor.stop_monitor()
+        #FOR TEST
+        #FOR TEST
         self.quit()
         self.wait(500)
     
@@ -38,25 +38,28 @@ class QTMonitorStockThread(QThread):
         timer = time.time()
         
         self.monitor = riskmanager.MonitorStock(self.env, self.timezone)
-        for info in self.monitor.monitor():
+        for infos in self.monitor.monitor():
             timer_curr = time.time()
-            if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA: #1초 마다
-                df = data.create_realtime_dataset([self.symbol])
-                self.monitor.env.append_raw(df)
-                p = df[f"{self.symbol}_Price"].iloc[-1]
-                result = {
-                    "apb":[p],
-                    "aps":[p],
-                    "apb_n":[1],
-                    "aps_n":[2],
-                    "s_apb_n":1,
-                    "s_aps_n":2
-                }
-                self.signal.emit(tradeinfo.asking_price_info(result, self.timezone))
-            
-            if timer_curr - timer >= int(self.interval_sec):
-                self.signal.emit(info)
-                timer = timer_curr
+            for info in infos:
+                if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA: #1초 마다
+                    df = data.create_realtime_dataset([self.symbol])
+                    self.monitor.env.append_raw(df)
+                    p = df[f"{self.symbol}_Price"].iloc[-1]
+                    rand1 = random.randint(1, 50)
+                    rand2 = random.randint(1, 50)
+                    result = {
+                        "apb":[p],
+                        "aps":[p],
+                        "apb_n":[rand1],
+                        "aps_n":[rand2],
+                        "s_apb_n":rand1,
+                        "s_aps_n":rand2,
+                        "predicted_price":p
+                    }
+                    self.signal.emit(tradeinfo.asking_price_info(result, self.timezone))
+                elif timer_curr - timer >= int(self.interval_sec): # this is not a waitingfordata info.
+                    self.signal.emit(info)
+                    timer = timer_curr
         
         '''
         self.monitor = riskmanager.StatelessStockMonitor(self.env, self.timezone)

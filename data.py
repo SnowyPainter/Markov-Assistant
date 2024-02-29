@@ -15,6 +15,8 @@ TIMEZONE_NYSE = 'America/New_York'
 
 def today(tz = 'America/New_York'):
     return datetime.now(pytz.timezone(tz))
+def today_minus_seconds(day, seconds=1):
+    return day - timedelta(seconds=seconds)
 def today_before(day, tz = 'America/New_York'):
     return datetime.now(pytz.timezone(tz)) - timedelta(days=day)
 
