@@ -61,6 +61,7 @@ def signed_info(result, tz):
 
 def asking_price_info(result, tz):
     ti = TradeInfo(data.today(tz))
+    ti.trade_type = TradeType.NONE
     ti.infos = result
     ti.info_type = InfoType.ASKINGPRICE
     return ti

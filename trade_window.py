@@ -24,12 +24,14 @@ class TradeWindow(QDialog):
     def initUI(self, symbol="", timezone='America/New_York'):
         self.symbol = symbol.upper()
         self.timezone = timezone
+        '''
         if self.timezone == data.TIMEZONE_NYSE:
             exchange = "나스닥"
         elif self.timezone == data.TIMEZONE_KRX:
             exchange = "서울"
         
         self.broker = create_broker(keys.KEY, keys.APISECRET, keys.ACCOUNT_NO, exchange, True)
+        '''
         
         self.setWindowTitle(f"Trade {self.symbol}")
         layout = QHBoxLayout()
@@ -43,8 +45,6 @@ class TradeWindow(QDialog):
         self.canvas = canvas.RealTimePlot()
         lags_label = QLabel("Lags : ")
         self.lags_input = QLineEdit(self)
-        update_interval_label = QLabel("Update Interval : ")
-        self.update_interval_input = QLineEdit(self)
         self.start_trade_btn = QPushButton("Start Trade", self)
         self.stoploss_btn = QPushButton("Stoploss", self)
         asking_price_list_label = QLabel("Asking Prices")
@@ -64,15 +64,13 @@ class TradeWindow(QDialog):
         
         self.lags_input.setValidator(val)
         self.lags_input.setText("3")
-        self.update_interval_input.setValidator(val)
-        self.update_interval_input.setText("1")
         self.start_trade_btn.clicked.connect(self.strat_trade_btn_clicked)
         self.stoploss_btn.clicked.connect(self.stoploss_btn_clicked)
         self.units_input.setValidator(val)
         self.canvas.canvas.set_major_formatter("%H:%M:%S")
         self.canvas.canvas.destroy_prev = False
         self.canvas.canvas.set_title(f"{self.symbol}")
-        self.asking_price_list.itemClicked.connect(self.price_list_item_clicked)
+        self.asking_price_list.itemClicked.connect(self.asking_price_list_item_clicked)
         self.price_list.itemClicked.connect(self.price_list_item_clicked)
         self.buy_btn.clicked.connect(self.buy_btn_clicked)
         self.sell_btn.clicked.connect(self.sell_btn_clicked)
@@ -82,8 +80,6 @@ class TradeWindow(QDialog):
         
         parameter_layout.addWidget(lags_label)
         parameter_layout.addWidget(self.lags_input)
-        parameter_layout.addWidget(update_interval_label)
-        parameter_layout.addWidget(self.update_interval_input)
         canvas_layout.addWidget(self.canvas)
         canvas_layout.addLayout(parameter_layout)
         hdiv = QHBoxLayout()
@@ -116,11 +112,11 @@ class TradeWindow(QDialog):
         self.asking_price_list.addItem(f"Sum of Selling Asking Price Amount : {sum_of_sells}")
         i = len(sells_p)
         for aps in sells_p[::-1]:
-            self.asking_price_list.addItem(f"Selling {i}, {sells_n[i]} : {aps}")
+            self.asking_price_list.addItem(f"Selling {i} | {sells_n[i-1]} | {aps}")
             i -= 1
         i = 1
         for apb in buys_p:
-            self.asking_price_list.addItem(f"Buying {i}, {buys_n[i]} : {apb}")
+            self.asking_price_list.addItem(f"Buying {i} | {buys_n[i-1]} | {apb}")
             i += 1
         self.asking_price_list.addItem(f"Sum of Buying Asking Price Amount : {sum_of_buys}")
     
@@ -129,6 +125,16 @@ class TradeWindow(QDialog):
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+    
+    def asking_price_list_item_clicked(self, item):
+        txt = str(item.text())
+        header = txt.split(' ')[0]
+        if header == "Buying" or header == "Selling":
+            price = txt.split(' | ')[2]
+            units = txt.split(' | ')[1]
+            self.price_input.setText(price)
+            self.units_input.setText(units)
+    
     def price_list_item_clicked(self, item):
         price = str(item.text().split(' / ')[1])
         self.price_input.setText(price)
@@ -226,12 +232,10 @@ class TradeWindow(QDialog):
         self.lower_band_line = self.canvas.canvas.create_sub_line("--", "green")
         
         str_lags = self.lags_input.text()
-        str_update_interval = self.update_interval_input.text()
-        if str_lags == "" or str_update_interval == "":
+        if str_lags == "":
             QMessageBox.information(self, "Error", "Weierd inputs.")
             return
         lags = int(str_lags)
-        interval = int(str_update_interval)
         target = f"{self.symbol}_Price"
         df = pd.DataFrame({target:[], 'Datetime':[]})
         df.set_index('Datetime')
@@ -242,7 +246,8 @@ class TradeWindow(QDialog):
         self.env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True
-        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.broker, self.env, interval, self.timezone)
+        self.broker = ""
+        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.broker, self.env, 60, self.timezone)
         self.montior_thread.signal.connect(self.monitor_thread_result_handler)
         self.montior_thread.start()
     def stoploss_btn_clicked(self):
@@ -251,16 +256,14 @@ class TradeWindow(QDialog):
             return
         self.stoploss_model_path = fname
         str_lags = self.lags_input.text()
-        str_update_interval = self.update_interval_input.text()
-        if str_lags == "" or str_update_interval == "":
+        if str_lags == "":
             QMessageBox.information(self, "Error", "Weierd inputs.")
             return
         if not self.trading:
             QMessageBox.information(self, "Error", "Before running stoploss, Run Stock Monitoring.")
             return
         lags = int(str_lags)
-        interval = int(str_update_interval)
-        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, self.symbol, lags, interval, self.timezone)
+        self.monitor_stoploss_thread = QTMonitorStoploss.QTMonitorStockThread(self.stoploss_model_path, self.symbol, lags, 60, self.timezone)
         self.monitor_stoploss_thread.signal.connect(self.monitor_stoploss_thread_handler)
         self.monitor_stoploss_thread.start()
     

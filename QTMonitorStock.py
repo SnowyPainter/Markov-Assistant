@@ -30,22 +30,35 @@ class QTMonitorStockThread(QThread):
     
     def stop(self):
         #self.monitor.stop_monitor()
+        
         self.quit()
         self.wait(500)
     
     def run(self):
-        '''
+        timer = time.time()
+        
         self.monitor = riskmanager.MonitorStock(self.env, self.timezone)
         for info in self.monitor.monitor():
             timer_curr = time.time()
-            if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
-                self.monitor.env.append_raw(data.create_realtime_dataset([self.symbol]))
+            if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA: #1초 마다
+                df = data.create_realtime_dataset([self.symbol])
+                self.monitor.env.append_raw(df)
+                p = df[f"{self.symbol}_Price"].iloc[-1]
+                result = {
+                    "apb":[p],
+                    "aps":[p],
+                    "apb_n":[1],
+                    "aps_n":[2],
+                    "s_apb_n":1,
+                    "s_aps_n":2
+                }
+                self.signal.emit(tradeinfo.asking_price_info(result, self.timezone))
             
             if timer_curr - timer >= int(self.interval_sec):
                 self.signal.emit(info)
                 timer = timer_curr
+        
         '''
-        timer = time.time()
         self.monitor = riskmanager.StatelessStockMonitor(self.env, self.timezone)
         hts_id = keys.HTS_ID
         if self.timezone == data.TIMEZONE_KRX:
@@ -108,3 +121,4 @@ class QTMonitorStockThread(QThread):
                         timer = timer_curr
                 except websockets.ConnectionClosed:
                     continue
+        '''
