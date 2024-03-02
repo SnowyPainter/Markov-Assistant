@@ -163,14 +163,8 @@ class TradeWindow(QDialog):
         self._log_trade("sell")
         
     def draw_assistant_lines(self, df, date, window):
-        std_dev = 2 
-        p = df[f"{self.symbol}_Price"]
-        sma = df['sma'].iloc[-1]
-        price_std = p.rolling(window=window).std().iloc[-1]
-        upperband = sma + std_dev * price_std
-        lowerband = sma - std_dev * price_std
-        self.canvas.canvas.add_sub_line_data(self.upper_band_line, date, upperband)
-        self.canvas.canvas.add_sub_line_data(self.lower_band_line, date, lowerband)
+        self.canvas.canvas.add_sub_line_data(self.upper_band_line, date, df['upper'].iloc[-1])
+        self.canvas.canvas.add_sub_line_data(self.lower_band_line, date, df['lower'].iloc[-1])
     
     def monitor_thread_result_handler(self, info):
         if info.info_type == tradeinfo.InfoType.WAITFORNEWDATA:
@@ -259,13 +253,11 @@ class TradeWindow(QDialog):
         self.env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         self.trading = True
-        #FOR TESTING
-        #FOR TESTING
-        #FOR TESTING
+        #FOR TEST
+        #FOR TEST
         self.broker = ""
-        #FOR TESTING
-        #FOR TESTING
-        #FOR TESTING
+        #FOR TEST
+        #FOR TEST
         today = data.today(self.timezone)
         self.create_new_candle = True
         self.candlechart_x = mdates.date2num([data.today_minus_seconds(today, self.interval), today])

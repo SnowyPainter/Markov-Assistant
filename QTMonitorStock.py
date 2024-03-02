@@ -36,7 +36,8 @@ class QTMonitorStockThread(QThread):
     
     def run(self):
         timer = time.time()
-        
+        #FOR TEST
+        #FOR TEST
         self.monitor = riskmanager.MonitorStock(self.env, self.timezone)
         for infos in self.monitor.monitor():
             timer_curr = time.time()
@@ -60,7 +61,8 @@ class QTMonitorStockThread(QThread):
                 elif timer_curr - timer >= int(self.interval_sec): # this is not a waitingfordata info.
                     self.signal.emit(info)
                     timer = timer_curr
-        
+        #FOR TEST
+        #FOR TEST
         '''
         self.monitor = riskmanager.StatelessStockMonitor(self.env, self.timezone)
         hts_id = keys.HTS_ID

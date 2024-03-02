@@ -181,10 +181,19 @@ class StockMarketEnvironment:
         state = self.df_.iloc[self.bar - self.lags:self.bar]
         return [state.values, state.values]
 
+    def _detect_low_volatility_signal(self, data, window=20, threshold=0.07):
+        rolling_std = data.rolling(window=window).std()
+        return rolling_std < threshold
+    
     def step(self, acts):
         #sideway trading/holding rewarding
-        volatility = np.std(self.df_[self.target][self.bar:self.bar + self.window])
-        sideway_reward = 0 if volatility <= 0.07 else 1
+        is_low = self._detect_low_volatility_signal(self.df_[self.target][self.bar:self.bar + self.window], self.window, 0.07)
+        sideway_reward = 0 if is_low.iloc[-1] == True else 1
+        
+        low_upper = self._detect_low_volatility_signal(self.df_['upper'][self.bar:self.bar + self.window], self.window, 0.05)
+        low_lower = self._detect_low_volatility_signal(self.df_['lower'][self.bar:self.bar + self.window], self.window, 0.05)
+        if low_upper.iloc[-1] or low_lower.iloc[-1]:
+            sideway_reward -= 1
         
         #trade rewarding
         if acts[Agent.SIDEWAY] == 1:
@@ -194,19 +203,22 @@ class StockMarketEnvironment:
 
             sma = self.df_['sma'].iloc[self.bar]
             ema = self.df_['ema'].iloc[self.bar]
-            rsi = self.df_['rsi'].iloc[self.bar]
+            rsi = self.df['rsi'].iloc[self.bar]
+            
             if price > sma or price > ema:
                 trade_reward += 1
-            else:
+            
+            if (rsi < 70) and (price < self.df_['lower'].iloc[self.bar]):
                 trade_reward -= 1
-                
+            elif (rsi > 30) and (price > self.df_['upper'].iloc[self.bar]):
+                trade_reward += 1
+            
             if rsi > 70 or rsi < 30:
                 trade_reward -= 1
-
         else:
             trade_reward = 0
         
-        self.total_reward += trade_reward + sideway_reward
+        self.total_reward += trade_reward
         
         self.bar += 1        
         if self.bar >= len(self.df_):

@@ -22,6 +22,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.lstm_train_result = None
         self.backtest_model_path = None
         self.backtesting = False
+        self.backtest_trade_model_path = ""
         self.portfolio_file = "./portfolio.json"
         self.load_portfolio()
         self.addWidgets()
@@ -455,11 +456,14 @@ class MyApp(QMainWindow, window_handler.Handler):
         QMessageBox.information(self, "Stop Trade", "Stopped Trading with realtime data.")
     
     def backtest_run_btn_clicked(self):
-        
+        if self.selected_stock == "":
+            QMessageBox.information(self, "Error", "Select a stock to analyze.")
+            return
+        if self.backtest_trade_model_path == "":
+            QMessageBox.information(self, "Error", "Open your model.")
+            return
         if self.backtesting or self.handle_model_path_error(self.backtest_trade_model_path) == -1 or self.handle_model_path_error(self.backtest_sideway_model_path) == -1:
             return
-        if self.selected_stock == "":
-            QMessageBox(self, "Error", "Select a stock to analyze.")
         tz = self.portfolio[self.selected_stock]["timezone"]
         
         symbol = self.backtest_option_symbol_input.text().strip()

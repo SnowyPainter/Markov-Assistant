@@ -149,15 +149,25 @@ def calculate_rsi(prices, period=14):
         return 50
     return 100 - (100 / (1 + rs))
 
+def calculate_bollinger_bands(prices, period=20):
+    rolling_mean = prices.rolling(window=period).mean()
+    rolling_std = prices.rolling(window=period).std()
+    upper = rolling_mean + (2 * rolling_std)
+    lower = rolling_mean - (2 * rolling_std)
+    return upper, lower
+
 def stock_data_columns():
-    return ['sma', 'ema', 'rsi', 'r']
+    return ['sma', 'ema', 'rsi', 'r', "upper", "lower"]
 
 def prepare_stock_data(df, target):
+    upper, lower = calculate_bollinger_bands(df[target])
     new = pd.DataFrame({
         target:df[target],
         "sma":calculate_sma(df[target]),
         "ema":calculate_ema(df[target]),
         "rsi":calculate_rsi(df[target]),
+        "upper": upper,
+        "lower": lower,
         "r":np.log(df[target] / df[target].shift(1))
     })
     new.dropna(inplace=True)

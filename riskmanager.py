@@ -187,7 +187,7 @@ class StatelessStockMonitor:
             
         self.bar += 1
         return ti
-
+#FOR TEST
 class MonitorStock:
     def __init__(self, env, timezone):
         self.env = env
@@ -255,8 +255,6 @@ class MonitorStock:
             self.bar += 1
             yield infos
             
-
-      
 class MonitorStoploss:
     def __init__(self, env, model, timezone):
         self.env = env
