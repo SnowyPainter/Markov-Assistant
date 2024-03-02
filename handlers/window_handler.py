@@ -9,9 +9,12 @@ class Handler:
     def handle_backtest_result(self, info):
         net_wealth = round(self.btt.bt.net_wealths[-1][1], 4)
         date = self.btt.bt.net_wealths[-1][0]
+        str_date = date
+        dt = datetime.datetime.strptime(str_date, '%Y-%m-%d').strftime("%Y-%m-%d %H:%M:%S")
+        dt = datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
         infotype = info.info_type
         position = info.trade_position
-        
+        self.backtest_plot.update_plot(dt, net_wealth)
         if info.trade_type == tradeinfo.TradeType.BUY or info.trade_type == tradeinfo.TradeType.SELL:
             units = info.units
             price = round(info.price, 2)
@@ -25,10 +28,7 @@ class Handler:
             elif infotype == tradeinfo.InfoType.TRAILSTOPLOSS:
                 p = info.stoploss
             self.backtest_trade_status_label.setText(f"{ttype} {units} for {price}, {p}")
-            str_date = date
-            date = datetime.datetime.strptime(str_date, '%Y-%m-%d').strftime("%Y-%m-%d %H:%M:%S")
-            date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-            self.backtest_plot.update_plot(date, net_wealth)
+            
             logger.log_backtest(net_wealth, str_date, infotype=int(infotype), position=int(position), tradetype=int(action), p=p, units=units, price=price)
         elif(infotype == tradeinfo.InfoType.HOLDING):
             price = round(info.price, 4)
