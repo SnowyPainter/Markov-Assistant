@@ -59,6 +59,13 @@ class PlotCanvas(FigureCanvas):
         FigureCanvas.setSizePolicy(self, QSizePolicy.Minimum, QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
+        self.multiple_y_axis = []
+        self.multiple_y_x = []
+        self.multiple_y_y = []
+        self.sub_y_lines = []
+        self.sub_y_linestyles = []
+        self.sub_y_colors = []
+        
         self.candlesticks = []
         self.x_data = []
         self.y_data = []
@@ -73,6 +80,27 @@ class PlotCanvas(FigureCanvas):
     def set_major_formatter(self, dateformat):
         self.axes.xaxis.set_major_formatter(mdates.DateFormatter(dateformat))
     
+    def create_new_y_axis(self, linestyle, color):
+        self.multiple_y_x.append([])
+        self.multiple_y_y.append([])
+        self.multiple_y_axis.append(self.axes.twinx())
+        self.sub_y_linestyles.append(linestyle)
+        self.sub_y_colors.append(color)
+        index = len(self.multiple_y_axis) - 1
+        line, = self.multiple_y_axis[index].plot(self.multiple_y_x[index], self.multiple_y_y[index], linestyle=linestyle, color=color)
+        self.sub_y_lines.append(line)
+        return index
+    
+    def create_sub_line(self, linestyle, color):
+        self.sub_x.append([])
+        self.sub_y.append([])
+        self.sub_linestyles.append(linestyle)
+        self.sub_colors.append(color)
+        index = len(self.sub_x) - 1
+        line, = self.axes.plot(self.sub_x[index], self.sub_y[index], linestyle=linestyle, color=color)
+        self.sub_lines.append(line)
+        return index
+        
     def set_title(self, title):
         self.axes.set_title(title)
     
@@ -101,16 +129,19 @@ class PlotCanvas(FigureCanvas):
         self.axes.autoscale_view()
         self.draw()
     
-    def create_sub_line(self, linestyle, color):
-        self.sub_x.append([])
-        self.sub_y.append([])
-        self.sub_linestyles.append(linestyle)
-        self.sub_colors.append(color)
-        index = len(self.sub_x) - 1
-        line, = self.axes.plot(self.sub_x[index], self.sub_y[index], linestyle=linestyle, color=color)
-        self.sub_lines.append(line)
-        return index
+    def add_multi_y_line_data(self, index, x, y):
+        self.multiple_y_x[index].append(x)
+        self.multiple_y_y[index].append(y)
+        if len(self.multiple_y_x[index]) > 10 and self.destroy_prev:
+            self.multiple_y_x[index] = self.multiple_y_x[index][-10:]
+            self.multiple_y_y[index] = self.multiple_y_y[index][-10:]
+        self.sub_y_lines[index].set_xdata(self.multiple_y_x[index])
+        self.sub_y_lines[index].set_ydata(self.multiple_y_y[index])
         
+        self.multiple_y_axis[index].relim()
+        self.multiple_y_axis[index].autoscale_view()
+        self.draw()
+    
     def plot_a_point(self, x, y, marker):
         self.axes.plot(x, y, marker)
         
@@ -156,6 +187,13 @@ class PlotCanvas(FigureCanvas):
         for i in range(0, len(self.sub_x)):
             self.sub_x[i] = []
             self.sub_y[i] = []
-            line, = self.axes.plot(self.sub_x[i], self.sub_y[i], linestyle=self.sub_linestyles[i], color=self.sub_colors[i])
+            #line, = self.axes.plot(self.sub_x[i], self.sub_y[i], linestyle=self.sub_linestyles[i], color=self.sub_colors[i])
+
+        for i in range(0, len(self.multiple_y_x)):
+            self.multiple_y_x[i] = []
+            self.multiple_y_y[i] = []
+            self.sub_y_lines[i].plot(self.multiple_y_x[i], self.multiple_y_y[i], linestyle=self.sub_y_linestyles[i], color=self.sub_y_colors[i])
+            
         self.draw()
         self.sub_lines = []
+        self.multiple_y_axis = []

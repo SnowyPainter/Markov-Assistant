@@ -9,15 +9,17 @@ class Handler:
     def handle_backtest_result(self, info):
         net_wealth = round(self.btt.bt.net_wealths[-1][1], 4)
         date = self.btt.bt.net_wealths[-1][0]
+        price = round(info.price, 2)
         str_date = date
         dt = datetime.datetime.strptime(str_date, '%Y-%m-%d').strftime("%Y-%m-%d %H:%M:%S")
         dt = datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
         infotype = info.info_type
         position = info.trade_position
         self.backtest_plot.update_plot(dt, net_wealth)
+        if price > 0:
+            self.backtest_plot.canvas.add_multi_y_line_data(self.backtest_stock_price_plot, dt, price)
         if info.trade_type == tradeinfo.TradeType.BUY or info.trade_type == tradeinfo.TradeType.SELL:
             units = info.units
-            price = round(info.price, 2)
             action = info.trade_type
             ttype = "Buy" if action == tradeinfo.TradeType.BUY else "Sell"
             p = 0

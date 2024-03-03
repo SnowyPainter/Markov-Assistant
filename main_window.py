@@ -500,6 +500,7 @@ class MyApp(QMainWindow, window_handler.Handler):
             if self.handle_flaw_dataset(df) == -1:
                 return
         self.backtest_plot.clear()
+        self.backtest_stock_price_plot = self.backtest_plot.canvas.create_new_y_axis('--', 'green')
         self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
         self.backtest_plot.canvas.destroy_prev = False
         self.backtest_trade_status_label.setText("TRADE STATUS")

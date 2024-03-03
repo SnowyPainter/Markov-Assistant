@@ -133,6 +133,7 @@ class RiskManager():
                 else:
                     holdinfo = tradeinfo.holding(price, self.timezone)
                     infos.append(holdinfo)
+                
                 self.net_wealths.append([date, self.calculate_net_wealth(price)])
                 bar += 1
                 if len(infos) > 0:
