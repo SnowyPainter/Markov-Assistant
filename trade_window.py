@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-import os, datetime
+import os, datetime 
 import QTMonitorStock, QTMonitorStoploss, tradeinfo
 from handlers.koreainvest import *
 from secret import keys
@@ -9,31 +9,31 @@ import matplotlib.dates as mdates
 import models, resources.canvas as canvas, data, QTLearn, environment, logger
 from tensorflow import keras
 import pandas as pd
+import asyncio
 
 class TradeWindow(QDialog):
     def __init__(self):
         super(TradeWindow, self).__init__(None)
         self.log_file = ""
         self.trading = False
-        self.interval = 60 # 1min
+        self.interval = 5 # 1min
         self.center()
     def closeEvent(self, a0: QCloseEvent) -> None:
         if self.trading:
-            self.montior_thread.stop()
+            self.ws_monitor.stop()
         self.trading = False
         a0.accept()
     
     def initUI(self, symbol="", timezone='America/New_York'):
         self.symbol = symbol.upper()
         self.timezone = timezone
-        '''
+        
         if self.timezone == data.TIMEZONE_NYSE:
             exchange = "나스닥"
         elif self.timezone == data.TIMEZONE_KRX:
             exchange = "서울"
         
         self.broker = create_broker(keys.KEY, keys.APISECRET, keys.ACCOUNT_NO, exchange, True)
-        '''
         
         self.setWindowTitle(f"Trade {self.symbol}")
         layout = QHBoxLayout()
@@ -255,16 +255,17 @@ class TradeWindow(QDialog):
         self.trading = True
         #FOR TEST
         #FOR TEST
-        self.broker = ""
+        #self.broker = ""
         #FOR TEST
         #FOR TEST
         today = data.today(self.timezone)
         self.create_new_candle = True
         self.candlechart_x = mdates.date2num([data.today_minus_seconds(today, self.interval), today])
         self.candlechart_prices = []
-        self.montior_thread = QTMonitorStock.QTMonitorStockThread(self.symbol, self.broker, self.env, self.interval, self.timezone)
-        self.montior_thread.signal.connect(self.monitor_thread_result_handler)
-        self.montior_thread.start()
+        self.ws_monitor = QTMonitorStock.WSMonitorStock(self.symbol, self.broker, self.env, self.interval, self.timezone)
+        self.ws_monitor.set_handler(self.monitor_thread_result_handler)
+        asyncio.get_event_loop().run_until_complete(self.ws_monitor.connect())
+        
     def stoploss_btn_clicked(self):
         fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './', "Keras (*.keras)")[0]
         if fname == '':

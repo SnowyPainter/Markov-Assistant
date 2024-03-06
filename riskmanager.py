@@ -156,7 +156,7 @@ class StatelessStockMonitor:
     
     def get_monitor(self, stoploss=-0.02, takeprofit=0.04):
         if self.bar >= len(self.env.df):
-            return tradeinfo.wait_for_data()
+            return tradeinfo.wait_for_data(self.timezone)
         
         price = self.get_price(self.bar)
         state = self.env.get_state(self.bar)

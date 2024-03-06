@@ -193,7 +193,10 @@ def get_balance(broker):
     return broker.fetch_present_balance()
 
 def get_deposit(balance_output):
-    return balance_output['output2'][0]['dcna_tot_amt']
+    print(balance_output)
+    #balance_output['output3']['tot_dncl_amt'] 잔고
+    balance = float(balance_output['output3']['tot_dncl_amt'])
+    return balance
 
 # for domestic market
 def get_price_to_asking_price(price):
