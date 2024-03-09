@@ -51,7 +51,6 @@ def create_websocket_data(approval_key, tr_id, tr_key):
 
 def handle_websocket_data(websocket, received):
     result = {"error":0}
-    print(received)
     if received[0] == '0':
         result["type"] = 0
         recvstr = received.split('|')
@@ -190,12 +189,10 @@ def create_broker(api_key, api_secret, acc_no, exchange="나스닥",mock=True):
     return broker
 
 def get_balance(broker):
-    return broker.fetch_present_balance()
+    return broker.fetch_balance()
 
 def get_deposit(balance_output):
-    print(balance_output)
-    #balance_output['output3']['tot_dncl_amt'] 잔고
-    balance = float(balance_output['output3']['tot_dncl_amt'])
+    balance = float(balance_output['output2'][0]['dnca_tot_amt'])
     return balance
 
 # for domestic market

@@ -282,7 +282,7 @@ class TradeWindow(QDialog):
         self.create_new_candle = True
         self.candlechart_x = mdates.date2num([data.today_minus_seconds(today, self.interval), today])
         self.candlechart_prices = []
-        self.ws_monitor = QTMonitorStock.WSMonitorStock(self.symbol, self.broker, self.env, self.interval, self.timezone)
+        self.ws_monitor = QTMonitorStock.WSMonitorStock(self.user_info ,self.symbol, self.broker, self.env, self.interval, self.timezone)
         self.ws_monitor.set_handler(self.monitor_thread_result_handler)
         asyncio.get_event_loop().run_until_complete(self.ws_monitor.connect())
         

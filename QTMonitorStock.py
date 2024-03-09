@@ -61,8 +61,9 @@ class QTMonitorStockThread(QThread):
                     timer = timer_curr
         
 class WSMonitorStock():
-    def __init__(self, symbol, broker, env, interval_sec, timezone, stoploss=-0.02, takeprofit=0.04):
+    def __init__(self, user_info, symbol, broker, env, interval_sec, timezone, stoploss=-0.02, takeprofit=0.04):
         self.env = env
+        self.user_info = user_info
         self.broker = broker
         self.symbol = symbol
         self.timezone = timezone
@@ -81,13 +82,19 @@ class WSMonitorStock():
     async def connect(self):
         timer = time.time()
         self.monitor = riskmanager.StatelessStockMonitor(self.env, self.timezone)
+        
+        #hts_id = self.user_info['htsid']
+        #key = self.user_info['apikey']
+        #secret = self.user_info['apisecret']
+        key = keys.KEY
+        secret = keys.APISECRET
         hts_id = keys.HTS_ID
         
         if self.timezone == data.TIMEZONE_KRX:
             actions = [[KOREA_ASKINGPRICE_ID, self.symbol], [KOREA_TRANSCATION_NOTICE_ID, hts_id]]
         elif self.timezone == data.TIMEZONE_NYSE:
             actions = [[NYSE_ASKINGPRICE_ID, get_tr_key_by_symbol(self.symbol)], [NYSE_TRANSCATION_NOTICE_ID, hts_id]]
-        approval_key = get_approval(keys.KEY, keys.APISECRET)
+        approval_key = get_approval(key, secret)
         
         send_data_list = []
         for action in actions:
@@ -108,13 +115,11 @@ class WSMonitorStock():
                     if result["error"] == -1:
                         break
                     if result["type"] == 0: #호가 처리
-                        print(result)
                         df = data.create_realtime_dataset_by_price(self.symbol, result["predicted_price"], self.timezone)
                         self.monitor.env.append_raw(df)
                         self.handler(tradeinfo.asking_price_info(result, self.timezone))
                         await asyncio.sleep(0.5)
                     elif result["type"] == 1: #체결 처리
-                        print(result)
                         if result["signed"] == True:
                             self.order_book[result["values"][2]]["signed"] = True
                             self.units = self.order_book[result["values"][2]]["units"]
@@ -122,8 +127,6 @@ class WSMonitorStock():
                         self.handler(tradeinfo.signed_info(result, self.timezone))
                         await asyncio.sleep(0.5)
                     if timer_curr - timer >= int(self.interval_sec):
-                        continue
-                        #test
                         trade_info = self.monitor.get_monitor(self.stoploss, self.takeprofit)
                         trade_type = trade_info.trade_type
                         price = trade_info.price

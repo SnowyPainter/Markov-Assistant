@@ -59,6 +59,11 @@ class LoginWindow(QMainWindow):
         
         if api_key and api_secret and hts_id and account_no and account_password:
             self.close()
+            try:
+                b = handlers.koreainvest.create_broker(api_key, api_secret, account_no, "서울", mock_trading)
+            except:
+                QMessageBox.warning(self, "Login Failed", "Failed to Login")
+                return
             self.open_main_window(api_key, api_secret, hts_id, account_no, account_password, mock_trading)
         else:
             QMessageBox.warning(self, "Login Failed", "Please fill in all fields.")
