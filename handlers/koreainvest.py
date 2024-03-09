@@ -51,7 +51,7 @@ def create_websocket_data(approval_key, tr_id, tr_key):
 
 def handle_websocket_data(websocket, received):
     result = {"error":0}
-    
+    print(received)
     if received[0] == '0':
         result["type"] = 0
         recvstr = received.split('|')

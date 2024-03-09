@@ -22,18 +22,18 @@ class TradeWindow(QDialog):
         if self.trading:
             self.ws_monitor.stop()
         self.trading = False
+        asyncio.get_event_loop().close()
         a0.accept()
     
-    def initUI(self, symbol="", timezone='America/New_York'):
+    def initUI(self, user_info, symbol="", timezone='America/New_York'):
         self.symbol = symbol.upper()
         self.timezone = timezone
+        self.user_info = user_info
         
         if self.timezone == data.TIMEZONE_NYSE:
             exchange = "나스닥"
         elif self.timezone == data.TIMEZONE_KRX:
             exchange = "서울"
-        
-        self.broker = create_broker(keys.KEY, keys.APISECRET, keys.ACCOUNT_NO, exchange, True)
         
         self.setWindowTitle(f"Trade {self.symbol}")
         layout = QHBoxLayout()
@@ -42,9 +42,13 @@ class TradeWindow(QDialog):
         order_layout = QVBoxLayout()
         order_inputs_layout = QHBoxLayout()
         order_btns_layout = QHBoxLayout()
+        account_layout = QVBoxLayout()
+        account_info_layout = QVBoxLayout()
         
         val = QIntValidator()
         self.canvas = canvas.RealTimePlot()
+        self.canvas.canvas.destroy_prev = True
+        self.canvas.canvas.limit_show = 50
         lags_label = QLabel("Lags : ")
         self.lags_input = QLineEdit(self)
         self.start_trade_btn = QPushButton("Start Trade", self)
@@ -63,6 +67,11 @@ class TradeWindow(QDialog):
         self.open_savepath_btn = QPushButton("Open Save File", self)
         self.calculate_profit_btn = QPushButton("Calculate Profit", self)
         self.profit_label = QLabel("Profit")
+
+        deposit_label = QLabel("Deposit: ")
+        self.deposit = QLabel("0")
+        accinfo_form = QFormLayout()
+        accinfo_form.addRow(deposit_label, self.deposit)
         
         self.lags_input.setValidator(val)
         self.lags_input.setText("3")
@@ -98,15 +107,26 @@ class TradeWindow(QDialog):
         order_btns_layout.addWidget(self.create_savepath_btn)
         order_btns_layout.addWidget(self.open_savepath_btn)
         order_btns_layout.addWidget(self.calculate_profit_btn)
+
+        account_info_layout.addLayout(accinfo_form)
         order_layout.addWidget(asking_price_list_label)
         order_layout.addWidget(self.asking_price_list)
         order_layout.addWidget(self.price_list)
         order_layout.addLayout(order_inputs_layout)
         order_layout.addLayout(order_btns_layout)
         order_layout.addWidget(self.profit_label)
-        layout.addLayout(canvas_layout, stretch=3)
+        account_layout.addLayout(account_info_layout)
+        layout.addLayout(canvas_layout, stretch=4)
         layout.addLayout(order_layout, stretch=1)
+        layout.addLayout(account_layout, stretch=1)
         self.setLayout(layout)
+        #self.broker = create_broker(user_info["apikey"], user_info["apisecret"], user_info["accno"], exchange, user_info["mock"])
+        self.broker = create_broker(keys.KEY, keys.APISECRET, keys.ACCOUNT_NO, exchange, True)
+        self._account_init(self.broker)
+    
+    def _account_init(self, broker):
+        balance = broker.fetch_balance()
+        self.deposit.setText(balance['output2'][0]['dnca_tot_amt'])
     
     def set_asking_price(self, buys_p, sells_p, buys_n, sells_n, sum_of_buys, sum_of_sells):
         self.asking_price_list.clear()

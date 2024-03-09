@@ -76,6 +76,8 @@ class PlotCanvas(FigureCanvas):
         self.sub_colors = []
         self.destroy_prev = True
         self.main_line, = self.axes.plot(self.x_data, self.y_data, marker='o')
+        
+        self.limit_show = 10
 
     def set_major_formatter(self, dateformat):
         self.axes.xaxis.set_major_formatter(mdates.DateFormatter(dateformat))
@@ -107,9 +109,9 @@ class PlotCanvas(FigureCanvas):
     def add_data(self, x, y):
         self.x_data.append(x)
         self.y_data.append(y)
-        if len(self.x_data) > 10 and self.destroy_prev:
-            self.x_data = self.x_data[-10:]
-            self.y_data = self.y_data[-10:]
+        if len(self.x_data) > self.limit_show and self.destroy_prev:
+            self.x_data = self.x_data[-self.limit_show:]
+            self.y_data = self.y_data[-self.limit_show:]
         self.main_line.set_xdata(self.x_data)
         self.main_line.set_ydata(self.y_data)
         self.axes.relim()
@@ -192,7 +194,8 @@ class PlotCanvas(FigureCanvas):
         for i in range(0, len(self.multiple_y_x)):
             self.multiple_y_x[i] = []
             self.multiple_y_y[i] = []
-            self.sub_y_lines[i].plot(self.multiple_y_x[i], self.multiple_y_y[i], linestyle=self.sub_y_linestyles[i], color=self.sub_y_colors[i])
+            self.sub_y_lines[i].set_xdata(self.multiple_y_x[i])
+            self.sub_y_lines[i].set_ydata(self.multiple_y_y[i])
             
         self.draw()
         self.sub_lines = []

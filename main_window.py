@@ -14,8 +14,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 class MyApp(QMainWindow, window_handler.Handler):
-    def __init__(self):
+    def __init__(self, user_info):
         super().__init__()
+        self.user_info = user_info
         self.windows = []
         self.dnn_train_result = None
         self.selected_stock = ""
@@ -342,7 +343,7 @@ class MyApp(QMainWindow, window_handler.Handler):
             return
         
         window = TradeWindow()
-        window.initUI(self.selected_stock, self.portfolio[self.selected_stock]['timezone'])
+        window.initUI(self.user_info, self.selected_stock, self.portfolio[self.selected_stock]['timezone'])
         self.windows.append(window)
         window.showMaximized()
         

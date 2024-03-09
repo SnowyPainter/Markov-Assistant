@@ -108,6 +108,7 @@ class WSMonitorStock():
                     if result["error"] == -1:
                         break
                     if result["type"] == 0: #호가 처리
+                        print(result)
                         df = data.create_realtime_dataset_by_price(self.symbol, result["predicted_price"], self.timezone)
                         self.monitor.env.append_raw(df)
                         self.handler(tradeinfo.asking_price_info(result, self.timezone))
@@ -121,6 +122,8 @@ class WSMonitorStock():
                         self.handler(tradeinfo.signed_info(result, self.timezone))
                         await asyncio.sleep(0.5)
                     if timer_curr - timer >= int(self.interval_sec):
+                        continue
+                        #test
                         trade_info = self.monitor.get_monitor(self.stoploss, self.takeprofit)
                         trade_type = trade_info.trade_type
                         price = trade_info.price
