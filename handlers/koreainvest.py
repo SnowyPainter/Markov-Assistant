@@ -3,8 +3,8 @@ import websockets
 import json
 import requests
 import os
-import asyncio
 import time
+import data
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
@@ -37,26 +37,29 @@ def get_approval(key, secret):
     approval_key = res.json()["approval_key"]
     return approval_key
 
+KOREA_DEALPRICE_ID = 'H0STCNT0'
 KOREA_ASKINGPRICE_ID = 'H0STASP0'
 KOREA_TRANSCATION_NOTICE_ID = 'H0STCNI0' #모의투자 H0STCNI9, tr_key = HTS ID
 
+NYSE_DEALPRICE_ID = 'HDFSCNT0'
 NYSE_ASKINGPRICE_ID = 'HDFSASP0'
 NYSE_TRANSCATION_NOTICE_ID = 'H0GSCNI0' # tr_key = HTS ID
+
+HANDLE_ASKINGPRICE = 0
+HANDLE_DEALPRICE = 1
+HANDLE_TRNSCNOTICE = 2
 
 def get_tr_key_by_symbol(symbol):
     return f"DNAS{symbol}"
 
-def create_websocket_data(approval_key, tr_id, tr_key):
-    return '{"header" : {"approval_key": "%s", "custtype" : "P", "tr_type" : "1", "content-type" : "utf-8" }, "body" : { "input":{ "tr_id" : "%s", "tr_key" : "%s"} } }'%(approval_key,tr_id, tr_key)
-
-def handle_websocket_data(websocket, received):
+def handle_ws_data(ws, data):
     result = {"error":0}
-    if received[0] == '0':
-        result["type"] = 0
-        recvstr = received.split('|')
+    if data[0] == '0':
+        recvstr = data.split('|')  # 수신데이터가 실데이터 이전은 '|'로 나뉘어져있어 split
         trid0 = recvstr[1]
         #국내장 호가 (10호가 제공)
         if trid0 == KOREA_ASKINGPRICE_ID:
+            result["type"] = HANDLE_ASKINGPRICE
             aps, apb, predicted_p = stock_ap_KRX(recvstr[3])
             result["aps"] = aps[0]
             result["aps_n"] = aps[1]
@@ -67,6 +70,7 @@ def handle_websocket_data(websocket, received):
             result["predicted_price"] = predicted_p
         #미국장 호가 (1호가 제공)
         elif trid0 == NYSE_ASKINGPRICE_ID:
+            result["type"] = HANDLE_ASKINGPRICE
             aps, apb = stock_ap_NYSE(recvstr[3])
             result["aps"] = aps[0]
             result["aps_n"] = aps[1]
@@ -74,47 +78,51 @@ def handle_websocket_data(websocket, received):
             result["apb"] = apb[0]
             result["apb_n"] = apb[1]
             result["s_apb_n"] = apb[2]
-            result["predicted_price"] = apb[0]
-    elif received[0] == '1':
-        result["type"] = 1
-        recvstr = received.split('|') 
+            result["predicted_price"] = apb[0][0]
+        elif trid0 == KOREA_DEALPRICE_ID: 
+            result["type"] = HANDLE_DEALPRICE
+            data_cnt = int(recvstr[2])  
+            info = stock_deal_KRX(data_cnt, recvstr[3])
+            result["stock"] = info[0]
+            result["current_price"] = info[2]
+        elif trid0 == NYSE_DEALPRICE_ID: 
+            result["type"] = HANDLE_DEALPRICE
+            data_cnt = int(recvstr[2]) 
+            info = stock_deal_NYSE(data_cnt, recvstr[3])
+            result["stock"] = info[0]
+            result["current_price"] = info[11]
+    elif data[0] == '1':
+        recvstr = data.split('|')  # 수신데이터가 실데이터 이전은 '|'로 나뉘어져있어 split
         trid0 = recvstr[1]
         # 주식체결 통보 처리
         if trid0 == KOREA_TRANSCATION_NOTICE_ID or trid0 == "H0STCNI9":  #2모의
-           signed, values = stock_signingnotice_KRX(recvstr[3], aes_key, aes_iv)
-           result["signed"] = signed
-           result["values"] = values
+            result["type"] = HANDLE_TRNSCNOTICE
+            signed, values = stock_signingnotice_KRX(recvstr[3], aes_key, aes_iv)
+            result["signed"] = signed
+            result["values"] = values
         # 해외주식체결 통보 처리
         elif trid0 == NYSE_TRANSCATION_NOTICE_ID:  
+            result["type"] = HANDLE_TRNSCNOTICE
             signed, values = stock_signingnotice_NYSE(recvstr[3], aes_key, aes_iv)
             result["signed"] = signed
             result["values"] = values
     else:
-        result["type"] = -1
-        jsonObject = json.loads(received)
+        jsonObject = json.loads(data)
         trid = jsonObject["header"]["tr_id"]
+        result["type"] = -1
         if trid != "PINGPONG":
             rt_cd = jsonObject["body"]["rt_cd"]
             if rt_cd == '1':  # 에러일 경우 처리
                 if jsonObject["body"]["msg1"] != 'ALREADY IN SUBSCRIBE':
                     print("### ERROR RETURN CODE [ %s ][ %s ] MSG [ %s ]" % (jsonObject["header"]["tr_key"], rt_cd, jsonObject["body"]["msg1"]))
-                result["error"] = -1
+                return {'error':-1}
             elif rt_cd == '0':  # 정상일 경우 처리
-                print("### RETURN CODE [ %s ][ %s ] MSG [ %s ]" % (jsonObject["header"]["tr_key"], rt_cd, jsonObject["body"]["msg1"]))
-                # 국내주식
-                if trid == KOREA_TRANSCATION_NOTICE_ID or trid == "H0STCNI9": 
+                # 체결통보 처리를 위한 AES256 KEY, IV 처리 단계
+                if trid == "H0GSCNI0": # 해외주식
                     aes_key = jsonObject["body"]["output"]["key"]
                     aes_iv = jsonObject["body"]["output"]["iv"]
-                    print("### KRX TRID [%s] KEY[%s] IV[%s]" % (trid, aes_key, aes_iv))
-                # 해외주식
-                elif trid == NYSE_TRANSCATION_NOTICE_ID: 
-                    aes_key = jsonObject["body"]["output"]["key"]
-                    aes_iv = jsonObject["body"]["output"]["iv"]
-                    print("### NYSE TRID [%s] KEY[%s] IV[%s]" % (trid, aes_key, aes_iv))
         elif trid == "PINGPONG":
-            print("### RECV [PINGPONG] [%s]" % (received))
-            websocket.pong(received)
-            print("### SEND [PINGPONG] [%s]" % (received))
+            ws.pong(data)
     return result
 
 def stock_ap_KRX(recv):
@@ -178,6 +186,16 @@ def stock_signingnotice_NYSE(data, key, iv):
             i += 1
         return False, pValue
 
+def stock_deal_KRX(data_cnt, data):
+    #menulist = "유가증권단축종목코드|주식체결시간|주식현재가|전일대비부호|전일대비|전일대비율|가중평균주식가격|주식시가|주식최고가|주식최저가|매도호가1|매수호가1|체결거래량|누적거래량|누적거래대금|매도체결건수|매수체결건수|순매수체결건수|체결강도|총매도수량|총매수수량|체결구분|매수비율|전일거래량대비등락율|시가시간|시가대비구분|시가대비|최고가시간|고가대비구분|고가대비|최저가시간|저가대비구분|저가대비|영업일자|신장운영구분코드|거래정지여부|매도호가잔량|매수호가잔량|총매도호가잔량|총매수호가잔량|거래량회전율|전일동시간누적거래량|전일동시간누적거래량비율|시간구분코드|임의종료구분코드|정적VI발동기준가"
+    pValue = data.split('^')
+    return pValue
+
+def stock_deal_NYSE(data_cnt, data):
+    #menulist = "실시간종목코드|종목코드|수수점자리수|현지영업일자|현지일자|현지시간|한국일자|한국시간|시가|고가|저가|현재가|대비구분|전일대비|등락율|매수호가|매도호가|매수잔량|매도잔량|체결량|거래량|거래대금|매도체결량|매수체결량|체결강도|시장구분"
+    pValue = data.split('^')
+    return pValue
+
 def create_broker(api_key, api_secret, acc_no, exchange="나스닥",mock=True):
     broker = mojito.KoreaInvestment(
         api_key=api_key,
@@ -191,9 +209,13 @@ def create_broker(api_key, api_secret, acc_no, exchange="나스닥",mock=True):
 def get_balance(broker):
     return broker.fetch_balance()
 
-def get_deposit(balance_output):
-    balance = float(balance_output['output2'][0]['dnca_tot_amt'])
-    return balance
+def get_deposit(balance_output, timezone):
+    dnca_tot_amt = 0
+    if timezone == data.TIMEZONE_KRX:
+        dnca_tot_amt = float(balance_output['output2'][0]["dnca_tot_amt"])
+    elif "dnca_tot_amt" in balance_output['output2']:
+        dnca_tot_amt = float(balance_output['output2']["dnca_tot_amt"])
+    return dnca_tot_amt
 
 # for domestic market
 def get_price_to_asking_price(price):

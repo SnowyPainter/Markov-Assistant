@@ -548,6 +548,13 @@ class MyApp(QMainWindow, window_handler.Handler):
 if __name__ == '__main__':
    app = QApplication(sys.argv)
    app.setStyleSheet(open('./resources/style.qss', 'r').read())
-   ex = MyApp()
+   ex = MyApp({
+            "apikey": keys.KEY,
+            "apisecret": keys.APISECRET,
+            "htsid": keys.HTS_ID,
+            "accno" : keys.ACCOUNT_NO,
+            "accpwd" : keys.ACCOUNT_PWD,
+            "mock": True
+        })
    ex.showMaximized()
    sys.exit(app.exec_())

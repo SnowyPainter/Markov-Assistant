@@ -12,6 +12,7 @@ class InfoType(IntEnum):
     SIGNED = 8
     ASKINGPRICE = 9
     TRADE = 10
+    DEAL = 11
 class TradeType(IntEnum):
     BUY = 1
     SELL = 2
@@ -65,6 +66,13 @@ def asking_price_info(result, tz):
     ti.trade_type = TradeType.NONE
     ti.infos = result
     ti.info_type = InfoType.ASKINGPRICE
+    return ti
+
+def deal_price_info(result, tz):
+    ti = TradeInfo(data.today(tz))
+    ti.trade_type = TradeType.NONE
+    ti.infos = result
+    ti.info_type = InfoType.DEAL
     return ti
 
 class TradeInfo:

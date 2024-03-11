@@ -120,13 +120,14 @@ class TradeWindow(QDialog):
         layout.addLayout(order_layout, stretch=1)
         layout.addLayout(account_layout, stretch=1)
         self.setLayout(layout)
-        #self.broker = create_broker(user_info["apikey"], user_info["apisecret"], user_info["accno"], exchange, user_info["mock"])
-        self.broker = create_broker(keys.KEY, keys.APISECRET, keys.ACCOUNT_NO, exchange, True)
+        self.broker = create_broker(user_info["apikey"], user_info["apisecret"], user_info["accno"], exchange, user_info["mock"])
+        #self.broker = create_broker(keys.KEY, keys.APISECRET, keys.ACCOUNT_NO, exchange, True)
         self._account_init(self.broker)
     
     def _account_init(self, broker):
         balance = broker.fetch_balance()
-        self.deposit.setText(balance['output2'][0]['dnca_tot_amt'])
+        dnca_tot_amt = str(get_deposit(balance, self.timezone))
+        self.deposit.setText(dnca_tot_amt)
     
     def set_asking_price(self, buys_p, sells_p, buys_n, sells_n, sum_of_buys, sum_of_sells):
         self.asking_price_list.clear()
@@ -191,7 +192,6 @@ class TradeWindow(QDialog):
             return
         trade_type = info.trade_type
         info_type = info.info_type
-        
         if info_type == tradeinfo.InfoType.ASKINGPRICE:
             info = info.infos
             self.set_asking_price(info["apb"], info["aps"], info["apb_n"], info["aps_n"], info["s_apb_n"], info["s_aps_n"])
@@ -201,7 +201,8 @@ class TradeWindow(QDialog):
             if self.create_new_candle:
                 self.canvas.canvas.add_candlestick(self.candlechart_x, self.candlechart_prices)
                 self.create_new_candle = False
-            
+        elif info_type == tradeinfo.InfoType.DEAL:
+            self.price_list.addItem(info.infos["current_price"])
         elif info_type == tradeinfo.InfoType.SIGNED:
             info = info.infos
             QMessageBox.information(self, "Signed", f"Order no : {info['values'][2]}")
@@ -283,8 +284,8 @@ class TradeWindow(QDialog):
         self.candlechart_x = mdates.date2num([data.today_minus_seconds(today, self.interval), today])
         self.candlechart_prices = []
         self.ws_monitor = QTMonitorStock.WSMonitorStock(self.user_info ,self.symbol, self.broker, self.env, self.interval, self.timezone)
-        self.ws_monitor.set_handler(self.monitor_thread_result_handler)
-        asyncio.get_event_loop().run_until_complete(self.ws_monitor.connect())
+        self.ws_monitor.signal.connect(self.monitor_thread_result_handler)
+        self.ws_monitor.start()
         
     def stoploss_btn_clicked(self):
         fname = QFileDialog.getOpenFileName(self, 'Open .keras model', './', "Keras (*.keras)")[0]
