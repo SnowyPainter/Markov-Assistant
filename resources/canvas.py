@@ -162,24 +162,22 @@ class PlotCanvas(FigureCanvas):
                        self.axes.plot([x[-2], x[-1]], [o, o], color='green', linewidth=2)[0],
                        self.axes.plot([x[-2], x[-1]], [c, c], color='red', linewidth=2)[0]]
         self.candlesticks.append(candlestick)
-        self.candlestick_update_count = 0
-    def update_candlestick(self, x, prices, updating_limit):
+        return len(self.candlesticks) - 1
+    def update_candlestick(self, x, prices, index):
         o = prices[0]
         h = max(prices)
         l = min(prices)
         c = prices[-1]
-        time_error = 2 #sec
-        if self.candlestick_update_count >= updating_limit-time_error: # Assumption to LAST UPDATE (1minuts => 56 is the updating last moment)
-            if len(prices) == 1:
-                return
         
-        self.candlesticks[-1][0].set_data([[x[-2], x[-2]], [l, h]])
-        self.candlesticks[-1][1].set_data([[x[-2], x[-1]], [o, o]])
-        self.candlesticks[-1][2].set_data([[x[-2], x[-1]], [c, c]])
+        if o == h and h == l and l == c:
+            return
+
+        self.candlesticks[index][0].set_data([[x[-2], x[-2]], [l, h]])
+        self.candlesticks[index][1].set_data([[x[-2], x[-1]], [o, o]])
+        self.candlesticks[index][2].set_data([[x[-2], x[-1]], [c, c]])
         self.axes.relim()
         self.axes.autoscale_view()
         self.draw()
-        self.candlestick_update_count += 1
         
     def clear(self):
         self.axes.clear()

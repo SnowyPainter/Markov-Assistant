@@ -147,7 +147,9 @@ class StatelessStockMonitor:
     def __init__(self, env, timezone):
         self.env = env
         self.timezone = timezone
-        self.bar = 0
+        self.bar = env.lags
+        self.units = 0
+        self.entry = 0
     def _reshape(self, state):
         return np.reshape(state, [1, self.env.lags, self.env.n_features])
     
@@ -155,9 +157,8 @@ class StatelessStockMonitor:
         return self.env.df[self.env.target].iloc[bar]
     
     def get_monitor(self, stoploss=-0.02, takeprofit=0.04):
-        if self.bar >= len(self.env.df):
+        if self.bar >= len(self.env.df_):
             return tradeinfo.wait_for_data(self.timezone)
-        
         price = self.get_price(self.bar)
         state = self.env.get_state(self.bar)
         ti = tradeinfo.none(self.timezone)
@@ -166,12 +167,12 @@ class StatelessStockMonitor:
         if trading:
             action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(self._reshape(state), verbose=0)[0, 0])
             if action == 0:
-                entry = price
-                units += 1
+                self.entry = price
+                self.units = 1
                 ti.set_trade_type(tradeinfo.TradeType.BUY)
-            elif action == 1 and units > 0:
-                loss = (price - entry) / entry
-                units -= 1
+            elif action == 1 and self.units > 0:
+                loss = (price - self.entry) / self.entry
+                self.units = 0
                 ti.set_trade_type(tradeinfo.TradeType.SELL)
                 if loss > takeprofit:
                     ti.set_info_type(tradeinfo.InfoType.TAKEPROFIT)

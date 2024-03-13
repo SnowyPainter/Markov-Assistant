@@ -17,12 +17,12 @@ class TradeWindow(QDialog):
         self.log_file = ""
         self.trading = False
         self.interval = 5 # 1min
+        self.candlestick_index = 0
         self.center()
     def closeEvent(self, a0: QCloseEvent) -> None:
         if self.trading:
             self.ws_monitor.stop()
         self.trading = False
-        asyncio.get_event_loop().close()
         a0.accept()
     
     def initUI(self, user_info, symbol="", timezone='America/New_York'):
@@ -194,12 +194,13 @@ class TradeWindow(QDialog):
         info_type = info.info_type
         if info_type == tradeinfo.InfoType.ASKINGPRICE:
             info = info.infos
+            price = float(info["predicted_price"])
             self.set_asking_price(info["apb"], info["aps"], info["apb_n"], info["aps_n"], info["s_apb_n"], info["s_aps_n"])
-            self.candlechart_prices.append(info["predicted_price"])
+            self.candlechart_prices.append(price)
             if len(self.canvas.canvas.candlesticks) > 0:
-                self.canvas.canvas.update_candlestick(self.candlechart_x, self.candlechart_prices, self.interval)
+                self.canvas.canvas.update_candlestick(self.candlechart_x, self.candlechart_prices, self.candlestick_index)
             if self.create_new_candle:
-                self.canvas.canvas.add_candlestick(self.candlechart_x, self.candlechart_prices)
+                self.candlestick_index = self.canvas.canvas.add_candlestick(self.candlechart_x, self.candlechart_prices)
                 self.create_new_candle = False
         elif info_type == tradeinfo.InfoType.DEAL:
             self.price_list.addItem(info.infos["current_price"])
@@ -266,7 +267,7 @@ class TradeWindow(QDialog):
         lags = int(str_lags)
         target = f"{self.symbol}_Price"
         df = pd.DataFrame({target:[], 'Datetime':[]})
-        df.set_index('Datetime')
+        df.set_index('Datetime', inplace=True)
         
         agents = []
         for i in range(0, len(self.model_paths)):
