@@ -204,6 +204,7 @@ class TradeWindow(QDialog):
                 self.create_new_candle = False
         elif info_type == tradeinfo.InfoType.DEAL:
             self.price_list.addItem(info.infos["current_price"])
+            self.price_list.scrollToBottom()
         elif info_type == tradeinfo.InfoType.SIGNED:
             info = info.infos
             QMessageBox.information(self, "Signed", f"Order no : {info['values'][2]}")
