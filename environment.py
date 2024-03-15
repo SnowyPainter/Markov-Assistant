@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import random
-import math
+import math, os
 import pandas as pd
 from enum import IntEnum
 import data, models
@@ -151,7 +151,15 @@ class StoplossEnv:
 
 class Agent(IntEnum):
     SIDEWAY = 0
-    TRADE = 1
+    RSI_TRADE = 1
+    SMA_TRADE = 2
+    
+def get_model_paths(dir):
+    models = ["sideway.keras", "rsi trade.keras", "sma trade.keras"]
+    paths = []
+    for model in models:
+        paths.append(os.path.join(dir, model))
+    return paths
     
 class StockMarketEnvironment:
     def __init__(self, agents, df, target, window=20, lags=3):

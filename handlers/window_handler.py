@@ -61,9 +61,13 @@ class Handler:
             self.show_error(f"Dataset made from your symbols is empty. Check your symbols")
             return -1
         return 0
-    def handle_model_path_error(self, model_path):
-        if model_path == None or not os.path.isfile(model_path):
-            self.show_error(f"Model path {model_path} is not available.")
-            return -1
-        return 0
+    def handle_model_path_error(self, model_paths):
+        result = -1
+        for path in model_paths:
+            if not os.path.isfile(path):
+                self.show_error(f"Model path {path} is not available.")
+                result = -1
+            else:
+                result = 0
+        return result
             

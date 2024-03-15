@@ -159,7 +159,7 @@ class WSMonitorStock(QThread):
                         #}
                         self.units += affordable_units
                         self.TEST_DEPOSIT -= affordable_units * price
-                        logger.log_trade(self.symbol, tradeinfo.TradeType.BUY, affordable_units, price, path="./log my NVDA trade 001.json")
+                        logger.log_trade(self.symbol, tradeinfo.TradeType.BUY, affordable_units, price, path="./log/log my NVDA trade 001.json")
                     elif trade_type == tradeinfo.TradeType.SELL and self.units > 0:
                         #result = place_sell_order_limits(self.broker, self.symbol, price, self.units)
                         #self.order_book[result['output']['ODNO']] = {
@@ -168,7 +168,7 @@ class WSMonitorStock(QThread):
                         #    "price":price
                         #}
                         self.TEST_DEPOSIT += self.units * price
-                        logger.log_trade(self.symbol, tradeinfo.TradeType.BUY, self.units, price, path="./log my NVDA trade 001.json")
+                        logger.log_trade(self.symbol, tradeinfo.TradeType.BUY, self.units, price, path="./log/log my NVDA trade 001.json")
                         self.units = 0
                     self.signal.emit(trade_info)
                     timer = timer_curr

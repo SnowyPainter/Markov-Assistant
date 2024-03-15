@@ -73,7 +73,7 @@ class TrainRLModelWindow(QDialog):
                     QMessageBox.information(self, "Existing Folder", f"{symbol} RL model folder is existing.")
                     return
                 os.makedirs(new_dir_path)
-                self.model_paths = [os.path.join(new_dir_path, f"sideway.keras"), os.path.join(new_dir_path, f"trade.keras")]
+                self.model_paths = environment.get_model_paths(new_dir_path)
             except Exception as e:
                 QMessageBox.critical(None, "Error", f"Error while system create a directory: {str(e)}", QMessageBox.Ok)
         else:
@@ -87,8 +87,9 @@ class TrainRLModelWindow(QDialog):
         features.append(target)
         df = data.create_dataset([symbol], start=data.today_before(days), end=data.today(), interval=interval)
         sideway_agent = models.DQNMulti(lags, 2, len(features)) # 0:hold, 1:trade
-        trade_agent = models.DQNMulti(lags, 2, len(features)) # 0:buy 1:sell
-        agents = [sideway_agent, trade_agent]
+        rsi_trade_agent = models.DQNMulti(lags, 2, len(features)) # 0:buy 1:sell
+        sma_trade_agent = models.DQNMulti(lags, 2, len(features)) # 0:buy 1:sell
+        agents = [sideway_agent, rsi_trade_agent, sma_trade_agent]
         self.stock_market_env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         
         models.set_seeds(100)

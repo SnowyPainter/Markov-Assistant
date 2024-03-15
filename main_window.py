@@ -23,7 +23,6 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.lstm_train_result = None
         self.backtest_model_path = None
         self.backtesting = False
-        self.backtest_trade_model_path = ""
         self.portfolio_file = "./portfolio.json"
         self.load_portfolio()
         self.addWidgets()
@@ -460,10 +459,7 @@ class MyApp(QMainWindow, window_handler.Handler):
         if self.selected_stock == "":
             QMessageBox.information(self, "Error", "Select a stock to analyze.")
             return
-        if self.backtest_trade_model_path == "":
-            QMessageBox.information(self, "Error", "Open your model.")
-            return
-        if self.backtesting or self.handle_model_path_error(self.backtest_trade_model_path) == -1 or self.handle_model_path_error(self.backtest_sideway_model_path) == -1:
+        if self.backtesting or self.handle_model_path_error(self.model_paths) == -1:
             return
         tz = self.portfolio[self.selected_stock]["timezone"]
         
@@ -505,7 +501,9 @@ class MyApp(QMainWindow, window_handler.Handler):
         self.backtest_plot.canvas.set_major_formatter('%H:%M:%S')
         self.backtest_plot.canvas.destroy_prev = False
         self.backtest_trade_status_label.setText("TRADE STATUS")
-        agents = [self.trade_sideway_model, self.trade_model]
+        agents = []
+        for i in range(0, len(self.model_paths)):
+            agents.append(keras.models.load_model(self.model_paths[i]))
         env = environment.StockMarketEnvironment(agents, df, target, lags=lags)
         self.btt = QTBacktest.BacktestThread(symbol, env, 1, tz)
         self.btt.signal.connect(self.handle_backtest_result)
@@ -521,13 +519,10 @@ class MyApp(QMainWindow, window_handler.Handler):
     def backtest_open_model_btn_clicked(self):
         folder_path = QFileDialog.getExistingDirectory(None, "Folder For New Model", "", QFileDialog.ShowDirsOnly)
         if folder_path:
-            self.backtest_trade_model_path = os.path.join(folder_path, f"trade.keras")
-            self.backtest_sideway_model_path = os.path.join(folder_path, f"sideway.keras")
+            self.model_paths = environment.get_model_paths(folder_path)
         else:
             return
-        self.backtest_opened_model_label.setText(f"{self.backtest_trade_model_path}")
-        self.trade_model = keras.models.load_model(self.backtest_trade_model_path)
-        self.trade_sideway_model = keras.models.load_model(self.backtest_sideway_model_path)
+        self.backtest_opened_model_label.setText(f"{self.model_paths[0]}")
         
     def toggle_simulation(self, state):
         if state == 2:

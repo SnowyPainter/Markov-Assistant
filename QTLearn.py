@@ -31,7 +31,7 @@ class StockMarketLearningThread(QThread):
         for e in range(self.episodes):
             states = self.env.reset()
             for i in range(0, len(states)):
-                states[i] = np.reshape(states[0], [1,  state_size, n_features])
+                states[i] = np.reshape(states[0], [1, state_size, n_features])
             
             for _ in range(10000):
                 acts = []

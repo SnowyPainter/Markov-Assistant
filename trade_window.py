@@ -246,7 +246,7 @@ class TradeWindow(QDialog):
     def strat_trade_btn_clicked(self):
         folder_path = QFileDialog.getExistingDirectory(None, "Folder For New Model", "", QFileDialog.ShowDirsOnly)
         if folder_path:
-            self.model_paths = [os.path.join(folder_path, f"sideway.keras"), os.path.join(folder_path, f"trade.keras")]
+            self.model_paths = environment.get_model_paths(folder_path)
         else:
             return
         for i in range(0, len(self.model_paths)):
