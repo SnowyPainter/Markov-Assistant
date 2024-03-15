@@ -27,9 +27,6 @@ class RiskManager():
         price = self.env.df[self.env.target].iloc[bar]
         return date, price
 
-    def calculate_net_wealth(self, price):
-        return self.current_balance + self.units * price
-
     def place_buy_order(self, bar, amount=None, units=None, gprice=None):
         date, price = self.get_date_price(bar)
         info = tradeinfo.TradeInfo(date)
@@ -37,14 +34,13 @@ class RiskManager():
             price = gprice
         if units is None:
             units = int(amount / price)
-        self.current_balance -= (1 + self.ptc) * units * price + self.ftc
         self.units += units
         self.trades += 1
         self.set_prices(price)
         info.set_units(units)
         info.set_trade_type(tradeinfo.TradeType.BUY)
         info.set_price(price)
-        return info
+        return info, (1 + self.ptc) * units * price + self.ftc
 
     def place_sell_order(self, bar, amount=None, units=None, gprice=None):
         date, price = self.get_date_price(bar)
@@ -53,22 +49,23 @@ class RiskManager():
             price = gprice
         if units is None:
             units = int(amount / price)
-        self.current_balance += (1 - self.ptc) * units * price - self.ftc
         self.units -= units
         self.trades += 1
         self.set_prices(price)
         info.set_units(units)
         info.set_trade_type(tradeinfo.TradeType.SELL)
         info.set_price(price)
-        return info
+        return info, (1 - self.ptc) * units * price - self.ftc
 
     def close_out(self, bar):
         infos = []
         if self.units < 0:
-            infos.append(self.place_buy_order(bar, units=-self.units))
+            info, cost = self.place_buy_order(bar, units=-self.units)
+            infos.append(info)
         else:
-            infos.append(self.place_sell_order(bar, units=self.units))
-        perf = (self.current_balance / self.initial_amount - 1) * 100
+            info, cost = self.place_sell_order(bar, units=self.units)
+            infos.append(info)
+        perf = ((self.stgy_1_balance + self.stgy_2_balance) / self.initial_amount - 1) * 100
         info = tradeinfo.TradeInfo(datetime.datetime.now())
         info.set_info_type(tradeinfo.InfoType.CLOSINGOUT)
         info.set_trade_type(tradeinfo.TradeType.NONE)
@@ -86,7 +83,14 @@ class RiskManager():
         self.tp = tp
         self.wait = 0
         self.current_balance = self.initial_amount
+        self.entry_price = 0
+        
+        self.stgy_1_balance = self.initial_amount / 2
+        self.stgy_2_balance = self.initial_amount / 2
+        
         self.net_wealths = list()
+        self.rsi_trade_units = 0
+        self.sma_trade_units = 0
         
         bar = self.env.lags
         units = 0
@@ -100,47 +104,86 @@ class RiskManager():
                 infos = []
                 self.wait = max(0, self.wait - 1)
                 date, price = self.get_date_price(bar)
-
+                
                 state = self.env.get_state(bar)
                 state = self._reshape(state)
-                trading = True if np.argmax(self.env.agents[environment.Agent.SIDEWAY].predict(state, verbose=0)[0, 0]) == 1 else False
+                
+                sideway_agent = self.env.agents[environment.Agent.SIDEWAY]
+                rsi_agent = self.env.agents[environment.Agent.RSI_TRADE]
+                sma_agent = self.env.agents[environment.Agent.SMA_TRADE]
+                
+                trading = True if np.argmax(sideway_agent.predict(state, verbose=0)[0, 0]) == 1 else False
+                rsi_action = np.argmax(rsi_agent.predict(state, verbose=0)[0, 0])
+                sma_action = np.argmax(sma_agent.predict(state, verbose=0)[0, 0])
+                if rsi_action == 0:
+                    info, cost = self.place_buy_order(bar, self.stgy_1_balance)
+                    self.stgy_1_balance -= cost
+                    self.rsi_trade_units += info.units
+                    if info.units > 0:
+                        infos.append(info)
+                
+                if sma_action == 0:
+                    info, cost = self.place_buy_order(bar, self.stgy_2_balance)
+                    self.stgy_2_balance -= cost
+                    self.rsi_trade_units += info.units
+                    if info.units > 0:
+                        infos.append(info)
+                print(rsi_action, sma_action)
+                if rsi_action == 1 and self.rsi_trade_units > 0:
+                    loss = (price - self.entry_price) / self.entry_price
+                    if loss >= self.tp:
+                        tpinfo, cost = self.place_sell_order(bar, units=self.rsi_trade_units, gprice=price)
+                        self.stgy_1_balance += cost
+                        self.rsi_trade_units -= tpinfo.units
+                        if guarantee:
+                            price = self.entry_price * (1 + self.tp)
+                            tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
+                            tpinfo.set_price(price)
+                        else:
+                            tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
+                        infos.append(tpinfo)
+                    elif loss <= -self.sl:
+                        slinfo, cost = self.place_sell_order(bar, units=self.rsi_trade_units, gprice=price)
+                        self.stgy_1_balance += cost
+                        self.sma_trade_units -= slinfo.units
+                        slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
+                        infos.append(slinfo)
+                if sma_action == 1 and self.sma_trade_units > 0:
+                    loss = (price - self.entry_price) / self.entry_price
+                    if loss >= self.tp:
+                        tpinfo, cost = self.place_sell_order(bar, units=self.sma_trade_units, gprice=price)
+                        self.stgy_2_balance += cost
+                        self.sma_trade_units -= tpinfo.units
+                        if guarantee:
+                            price = self.entry_price * (1 + self.tp)
+                            tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
+                            tpinfo.set_price(price)
+                        else:
+                            tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
+                        infos.append(tpinfo)
+                    elif loss <= -self.sl:
+                        slinfo, cost = self.place_sell_order(bar, units=self.sma_trade_units, gprice=price)
+                        self.stgy_2_balance += cost
+                        self.sma_trade_units -= slinfo.units
+                        slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
+                        infos.append(slinfo)
                 if trading:
-                    action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(state, verbose=0)[0, 0])
-                    if action == 0:
-                        info = self.place_buy_order(bar, self.current_balance)
-                        if info.units > 0:
-                            infos.append(info)
-                    elif action == 1 and self.units > 0:
-                        loss = (price - self.entry_price) / self.entry_price
-                        
-                        if loss >= self.tp:
-                            tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
-                            if guarantee:
-                                price = self.entry_price * (1 + self.tp)
-                                tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
-                                tpinfo.set_price(price)
-                            else:
-                                tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
-                            infos.append(tpinfo)
-                        #elif loss > self.ptc:
-                        #    tpinfo = self.place_sell_order(bar, units=self.units, gprice=price)
-                        #    tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
-                        #    infos.append(tpinfo)
-                        elif loss <= -self.sl:
-                            slinfo = self.place_sell_order(bar, units=self.units, gprice=price)
-                            slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
-                            infos.append(slinfo)
+                    # sideway
+                    a = "dd"
                 else:
                     holdinfo = tradeinfo.holding(price, self.timezone)
                     infos.append(holdinfo)
                 
-                self.net_wealths.append([date, self.calculate_net_wealth(price)])
+                net_wealth = self.stgy_1_balance + self.stgy_2_balance + self.units * price
+                self.net_wealths.append([date, net_wealth])
                 bar += 1
                 if len(infos) > 0:
                     yield infos
         
         bar -= 1
 
+        self.stgy_1_balance += self.rsi_trade_units * price
+        self.stgy_2_balance += self.sma_trade_units * price
         yield self.close_out(bar)
 
 class StatelessStockMonitor:

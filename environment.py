@@ -187,7 +187,7 @@ class StockMarketEnvironment:
         self.total_reward = 0
         self.bar = self.lags
         state = self.df_.iloc[self.bar - self.lags:self.bar]
-        return [state.values, state.values]
+        return [state.values, state.values, state.values]
 
     def _detect_low_volatility_signal(self, data, window=20, threshold=0.07):
         rolling_std = data.rolling(window=window).std()
@@ -202,31 +202,31 @@ class StockMarketEnvironment:
         low_lower = self._detect_low_volatility_signal(self.df_['lower'][self.bar:self.bar + self.window], self.window, 0.05)
         if low_upper.iloc[-1] or low_lower.iloc[-1]:
             sideway_reward -= 1
+    
+    #trade rewarding
+    
+        d = self.df['d'].iloc[self.bar]
+        price = self.df_[self.target].iloc[self.bar]
+        rsi_trade_reward = 0
+        sma_trade_reward = 1 if acts[Agent.SMA_TRADE] == d else 0
+        sma = self.df_['sma'].iloc[self.bar]
+        ema = self.df_['ema'].iloc[self.bar]
+        rsi = self.df['rsi'].iloc[self.bar]
         
-        #trade rewarding
-        if acts[Agent.SIDEWAY] == 1:
-            d = self.df['d'].iloc[self.bar]
-            price = self.df_[self.target].iloc[self.bar]
-            trade_reward = 1 if acts[Agent.TRADE] == d else 0
-
-            sma = self.df_['sma'].iloc[self.bar]
-            ema = self.df_['ema'].iloc[self.bar]
-            rsi = self.df['rsi'].iloc[self.bar]
-            
-            if price > sma or price > ema:
-                trade_reward += 1
-            
-            if (rsi < 70) and (price < self.df_['lower'].iloc[self.bar]):
-                trade_reward -= 1
-            elif (rsi > 30) and (price > self.df_['upper'].iloc[self.bar]):
-                trade_reward += 1
-            
-            if rsi > 70 or rsi < 30:
-                trade_reward -= 1
+        if price > sma or price > ema:
+            sma_trade_reward += 1
         else:
-            trade_reward = 0
+            sma_trade_reward -= 1
         
-        self.total_reward += trade_reward
+        if (rsi < 70) and (price < self.df_['lower'].iloc[self.bar]):
+            rsi_trade_reward -= 1
+        elif (rsi > 30) and (price > self.df_['upper'].iloc[self.bar]):
+            rsi_trade_reward += 1
+        
+        if rsi > 70 or rsi < 30:
+            rsi_trade_reward -= 1
+    
+        self.total_reward += sma_trade_reward + rsi_trade_reward + sideway_reward
         
         self.bar += 1        
         if self.bar >= len(self.df_):
@@ -236,5 +236,6 @@ class StockMarketEnvironment:
         info = {}
         
         sideway_state = self._get_state()
-        trade_state = self._get_state()
-        return [sideway_state, trade_state], [sideway_reward, trade_reward], done, info
+        rsi_trade_state = self._get_state()
+        sma_trade_state = self._get_state()
+        return [sideway_state, rsi_trade_state, sma_trade_state], [sideway_reward, rsi_trade_reward, sma_trade_reward], done, info

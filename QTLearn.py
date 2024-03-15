@@ -26,8 +26,8 @@ class StockMarketLearningThread(QThread):
         self.batch_size = batch_size
 
     def run(self):
-        state_size = self.env.agents[environment.Agent.TRADE].state_size
-        n_features = self.env.agents[environment.Agent.TRADE].n_features
+        state_size = self.env.agents[environment.Agent.RSI_TRADE].state_size
+        n_features = self.env.agents[environment.Agent.RSI_TRADE].n_features
         for e in range(self.episodes):
             states = self.env.reset()
             for i in range(0, len(states)):
