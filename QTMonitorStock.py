@@ -89,12 +89,12 @@ class WSMonitorStock(QThread):
         timer = time.time()
         self.monitor = riskmanager.StatelessStockMonitor(self.env, self.timezone)
         
-        #hts_id = self.user_info['htsid']
-        #key = self.user_info['apikey']
-        #secret = self.user_info['apisecret']
-        key = keys.KEY
-        secret = keys.APISECRET
-        hts_id = keys.HTS_ID
+        hts_id = self.user_info['htsid']
+        key = self.user_info['apikey']
+        secret = self.user_info['apisecret']
+        #key = keys.KEY
+        #secret = keys.APISECRET
+        #hts_id = keys.HTS_ID
         g_approval_key = get_approval(key, secret)
         url = 'ws://ops.koreainvestment.com:31000' # 모의투자계좌
         #url = 'ws://ops.koreainvestment.com:21000' # 실전투자계좌
