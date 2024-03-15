@@ -16,7 +16,7 @@ class TradeWindow(QDialog):
         super(TradeWindow, self).__init__(None)
         self.log_file = ""
         self.trading = False
-        self.interval = 5 # 1min
+        self.interval = 60 # 1min
         self.candlestick_index = 0
         self.center()
     def closeEvent(self, a0: QCloseEvent) -> None:
