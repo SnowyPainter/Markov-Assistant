@@ -115,61 +115,58 @@ class RiskManager():
                 trading = True if np.argmax(sideway_agent.predict(state, verbose=0)[0, 0]) == 1 else False
                 rsi_action = np.argmax(rsi_agent.predict(state, verbose=0)[0, 0])
                 sma_action = np.argmax(sma_agent.predict(state, verbose=0)[0, 0])
-                if rsi_action == 0:
-                    info, cost = self.place_buy_order(bar, self.stgy_1_balance)
-                    self.stgy_1_balance -= cost
-                    self.rsi_trade_units += info.units
-                    if info.units > 0:
-                        infos.append(info)
                 
-                if sma_action == 0:
-                    info, cost = self.place_buy_order(bar, self.stgy_2_balance)
-                    self.stgy_2_balance -= cost
-                    self.rsi_trade_units += info.units
-                    if info.units > 0:
-                        infos.append(info)
-                print(rsi_action, sma_action)
-                if rsi_action == 1 and self.rsi_trade_units > 0:
-                    loss = (price - self.entry_price) / self.entry_price
-                    if loss >= self.tp:
-                        tpinfo, cost = self.place_sell_order(bar, units=self.rsi_trade_units, gprice=price)
-                        self.stgy_1_balance += cost
-                        self.rsi_trade_units -= tpinfo.units
-                        if guarantee:
-                            price = self.entry_price * (1 + self.tp)
-                            tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
-                            tpinfo.set_price(price)
-                        else:
-                            tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
-                        infos.append(tpinfo)
-                    elif loss <= -self.sl:
-                        slinfo, cost = self.place_sell_order(bar, units=self.rsi_trade_units, gprice=price)
-                        self.stgy_1_balance += cost
-                        self.sma_trade_units -= slinfo.units
-                        slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
-                        infos.append(slinfo)
-                if sma_action == 1 and self.sma_trade_units > 0:
-                    loss = (price - self.entry_price) / self.entry_price
-                    if loss >= self.tp:
-                        tpinfo, cost = self.place_sell_order(bar, units=self.sma_trade_units, gprice=price)
-                        self.stgy_2_balance += cost
-                        self.sma_trade_units -= tpinfo.units
-                        if guarantee:
-                            price = self.entry_price * (1 + self.tp)
-                            tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
-                            tpinfo.set_price(price)
-                        else:
-                            tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
-                        infos.append(tpinfo)
-                    elif loss <= -self.sl:
-                        slinfo, cost = self.place_sell_order(bar, units=self.sma_trade_units, gprice=price)
-                        self.stgy_2_balance += cost
-                        self.sma_trade_units -= slinfo.units
-                        slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
-                        infos.append(slinfo)
                 if trading:
-                    # sideway
-                    a = "dd"
+                    if rsi_action == 0:
+                        info, cost = self.place_buy_order(bar, self.stgy_1_balance)
+                        self.stgy_1_balance -= cost
+                        self.rsi_trade_units += info.units
+                        if info.units > 0:
+                            infos.append(info)
+                    if sma_action == 0:
+                        info, cost = self.place_buy_order(bar, self.stgy_2_balance)
+                        self.stgy_2_balance -= cost
+                        self.rsi_trade_units += info.units
+                        if info.units > 0:
+                            infos.append(info)
+                    if rsi_action == 1 and self.rsi_trade_units > 0:
+                        loss = (price - self.entry_price) / self.entry_price
+                        if loss >= self.tp:
+                            tpinfo, cost = self.place_sell_order(bar, units=self.rsi_trade_units, gprice=price)
+                            self.stgy_1_balance += cost
+                            self.rsi_trade_units -= tpinfo.units
+                            if guarantee:
+                                price = self.entry_price * (1 + self.tp)
+                                tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
+                                tpinfo.set_price(price)
+                            else:
+                                tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
+                            infos.append(tpinfo)
+                        elif loss <= -self.sl:
+                            slinfo, cost = self.place_sell_order(bar, units=self.rsi_trade_units, gprice=price)
+                            self.stgy_1_balance += cost
+                            self.rsi_trade_units -= slinfo.units
+                            slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
+                            infos.append(slinfo)
+                    if sma_action == 1 and self.sma_trade_units > 0:
+                        loss = (price - self.entry_price) / self.entry_price
+                        if loss >= self.tp:
+                            tpinfo, cost = self.place_sell_order(bar, units=self.sma_trade_units, gprice=price)
+                            self.stgy_2_balance += cost
+                            self.sma_trade_units -= tpinfo.units
+                            if guarantee:
+                                price = self.entry_price * (1 + self.tp)
+                                tpinfo.set_takeprofit(self.tp, tradeinfo.TradePosition.LONG)
+                                tpinfo.set_price(price)
+                            else:
+                                tpinfo.set_takeprofit(loss, tradeinfo.TradePosition.LONG)
+                            infos.append(tpinfo)
+                        elif loss <= -self.sl:
+                            slinfo, cost = self.place_sell_order(bar, units=self.sma_trade_units, gprice=price)
+                            self.stgy_2_balance += cost
+                            self.sma_trade_units -= slinfo.units
+                            slinfo.set_stoploss(loss, tradeinfo.TradePosition.LONG)
+                            infos.append(slinfo)
                 else:
                     holdinfo = tradeinfo.holding(price, self.timezone)
                     infos.append(holdinfo)
@@ -208,12 +205,13 @@ class StatelessStockMonitor:
         ti.set_price(price)
         trading = True if np.argmax(self.env.agents[environment.Agent.SIDEWAY].predict(self._reshape(state), verbose=0)[0, 0]) == 1 else False
         if trading:
-            action = np.argmax(self.env.agents[environment.Agent.TRADE].predict(self._reshape(state), verbose=0)[0, 0])
-            if action == 0:
+            rsi_action = np.argmax(self.env.agents[environment.Agent.RSI_TRADE].predict(self._reshape(state), verbose=0)[0, 0])
+            sma_action = np.argmax(self.env.agents[environment.Agent.SMA_TRADE].predict(self._reshape(state), verbose=0)[0, 0])
+            if rsi_action == 0 or sma_action:
                 self.entry = price
                 self.units = 1
                 ti.set_trade_type(tradeinfo.TradeType.BUY)
-            elif action == 1 and self.units > 0:
+            elif (rsi_action == 1 or sma_action == 1) and self.units > 0:
                 loss = (price - self.entry) / self.entry
                 self.units = 0
                 ti.set_trade_type(tradeinfo.TradeType.SELL)
