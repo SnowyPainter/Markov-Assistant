@@ -99,7 +99,6 @@ class WSMonitorStock(QThread):
         url = 'ws://ops.koreainvestment.com:31000' # 모의투자계좌
         #url = 'ws://ops.koreainvestment.com:21000' # 실전투자계좌
 
-        
         if self.timezone == TIMEZONE_KRX:
             code_list = [['1', KOREA_ASKINGPRICE_ID, self.symbol.split('.')[0]], ['1', KOREA_DEALPRICE_ID, self.symbol.split('.')[0]],['1', KOREA_TRANSCATION_NOTICE_ID, hts_id]]
         else:

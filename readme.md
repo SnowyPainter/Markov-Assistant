@@ -42,6 +42,8 @@ Your main trading algorithm consisted of different agent that works interdepende
 * Holding : Your one of your agent is for prevent trading while sideway market.
 * Trading : Other agents, interact each other, trade a stock.
 
+1 minute interval candle stick graph, bollinger bands supported.
+
 ### Installing Environment
 * CUDA: 12.4
 * Python: 3.9.12
