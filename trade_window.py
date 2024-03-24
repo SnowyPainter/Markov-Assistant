@@ -213,7 +213,7 @@ class TradeWindow(QDialog):
             price = info.price
             today = data.today(self.timezone)
             self.candlechart_x = mdates.date2num([data.today_minus_seconds(today, self.interval), today])
-            self.candlechart_prices = []
+            self.candlechart_prices = [price]
             self.create_new_candle = True
             self.canvas.update_plot(date, price)
             window = 20
